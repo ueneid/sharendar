@@ -1,7 +1,7 @@
 "use client";
 
 import { X, Copy, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -12,6 +12,11 @@ interface ShareModalProps {
 
 export default function ShareModal({ isOpen, onClose, shareUrl, title }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
+  const [canShare, setCanShare] = useState(false);
+
+  useEffect(() => {
+    setCanShare(typeof navigator !== 'undefined' && 'share' in navigator);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -82,7 +87,7 @@ export default function ShareModal({ isOpen, onClose, shareUrl, title }: ShareMo
             </div>
           </div>
           
-          {navigator.share && (
+          {canShare && (
             <button
               onClick={handleShare}
               className="w-full py-3 bg-secondary-500 text-white rounded-lg hover:bg-secondary-600"

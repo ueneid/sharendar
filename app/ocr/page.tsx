@@ -3,6 +3,7 @@
 import MobileLayout from "@/components/layout/MobileLayout";
 import { CameraIcon, UploadIcon, FileTextIcon } from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
 
 export default function OCRPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -73,11 +74,14 @@ export default function OCRPage() {
           ) : (
             <div className="space-y-4">
               <div className="relative">
-                <img
-                  src={selectedImage}
-                  alt="アップロードされた画像"
-                  className="w-full rounded-lg"
-                />
+                <div className="relative w-full h-64">
+                  <Image
+                    src={selectedImage}
+                    alt="アップロードされた画像"
+                    fill
+                    className="object-contain rounded-lg"
+                  />
+                </div>
                 {isProcessing && (
                   <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
                     <div className="bg-white rounded-lg p-4">
@@ -121,7 +125,7 @@ export default function OCRPage() {
                   <span className="inline-block text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
                     3/15 遠足
                   </span>
-                  <span className="inline-block text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded ml-1">
+                  <span className="inline-block text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded ml-1">
                     持ち物: お弁当
                   </span>
                 </div>

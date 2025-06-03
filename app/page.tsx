@@ -29,13 +29,13 @@ export default function HomePage() {
           </Link>
 
           <Link href="/ocr" className="card p-6 flex flex-col items-center space-y-3 hover:shadow-md transition-shadow">
-            <Upload className="w-12 h-12 text-green-500" />
+            <Upload className="w-12 h-12 text-blue-600" />
             <span className="font-medium text-gray-900">OCR読取</span>
             <span className="text-xs text-gray-500 text-center">プリントを撮影</span>
           </Link>
 
           <div className="card p-6 flex flex-col items-center space-y-3 opacity-50">
-            <Users className="w-12 h-12 text-orange-500" />
+            <Users className="w-12 h-12 text-blue-400" />
             <span className="font-medium text-gray-900">家族設定</span>
             <span className="text-xs text-gray-500 text-center">準備中</span>
           </div>
@@ -49,7 +49,7 @@ export default function HomePage() {
               <span className="text-sm text-gray-700">遠足（太郎）</span>
             </div>
             <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
               <span className="text-sm text-gray-700">体操服準備（花子）</span>
             </div>
           </div>

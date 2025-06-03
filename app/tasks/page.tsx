@@ -66,11 +66,11 @@ export default function TasksPage() {
   const getPriorityColor = (priority: TaskPriority) => {
     switch (priority) {
       case "high":
-        return "text-red-600 bg-red-50";
+        return "text-blue-700 bg-blue-100";
       case "medium":
-        return "text-yellow-600 bg-yellow-50";
+        return "text-blue-600 bg-blue-50";
       case "low":
-        return "text-green-600 bg-green-50";
+        return "text-blue-500 bg-blue-50";
     }
   };
 
