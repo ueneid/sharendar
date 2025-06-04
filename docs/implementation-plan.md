@@ -19,7 +19,7 @@ Sharendar MVPの実装を効率的に進めるための詳細なタスク計画�
 
 ## 実装タスク
 
-### 🔴 Phase 1: Infrastructure層 (High Priority)
+### ✅ Phase 1: Infrastructure層 **完了**
 
 #### ✅ 1. IndexedDB (Dexie.js) のセットアップとスキーマ定義 **完了**
 **目的**: ローカルデータストレージの基盤構築
@@ -43,40 +43,61 @@ Sharendar MVPの実装を効率的に進めるための詳細なタスク計画�
 
 ---
 
-### 🟡 Phase 2: Application層 (High Priority)
+### ✅ Phase 2: Application層 **完了**
 
-#### 2. 家族メンバー管理のユースケース実装
-**目的**: ドメインロジックとインフラ層の接続
+#### ✅ 2. 家族メンバー管理のユースケース実装 **完了**
+**目的**: クリーンアーキテクチャ的なApplication層実装
 
 **詳細タスク**:
-- [ ] `/application/family/` ユースケース実装
-  - 家族メンバー作成
-  - 更新・削除
-  - バリデーション統合
-- [ ] ドメイン層とインフラ層の接続
-- [ ] エラーハンドリングの統合
+- [x] `/domain/family/repository.ts` - Repository Interface定義
+- [x] `/application/family/` ユースケース実装
+  - [x] `commands.ts` - コマンド定義
+  - [x] `queries.ts` - クエリ定義
+  - [x] `use-cases.ts` - FamilyMemberUseCase実装
+  - [x] `index.ts` - DIコンテナ統合
+- [x] `/application/shared/` DI設定
+  - [x] `types.ts` - DIシンボル定義
+  - [x] `container.ts` - DIコンテナ作成
+- [x] `/infrastructure/di/` DI実装
+  - [x] `bindings.ts` - バインディング設定
+  - [x] `container.ts` - コンテナ初期化
+- [x] InversifyJS導入と設定
+- [x] TypeScriptデコレータ設定
 
 **成果物**:
-- ビジネスロジックの実装
-- Repository経由のデータ操作
+- ✅ 完全な依存性逆転原則(DIP)的実装
+- ✅ 依存性注入(DI)によるクリーンなアーキテクチャ
+- ✅ 43個の統合テスト実装済み、全てパス
+- ✅ CQRSパターン実装
+- ✅ 高いテスタビリティと保守性
 
 ---
 
-#### 3. カレンダー・タスクのユースケース実装
+#### 🟡 3. カレンダー・タスクのユースケース実装
 **目的**: 各ドメインのユースケース層完成
 
 **詳細タスク**:
+- [ ] `/domain/calendar/` ドメイン層実装
+  - [ ] `types.ts` - イベント関連型定義
+  - [ ] `repository.ts` - Calendar Repository Interface
+  - [ ] `operations.ts` - カレンダー操作
+- [ ] `/domain/tasks/` ドメイン層実装
+  - [ ] `types.ts` - タスク関連型定義
+  - [ ] `repository.ts` - Task Repository Interface
+  - [ ] `operations.ts` - タスク操作
 - [ ] `/application/calendar/` ユースケース実装
 - [ ] `/application/tasks/` ユースケース実装
 - [ ] 相互依存関係の処理
+- [ ] DIコンテナのDIシンボル追加
 
 **成果物**:
 - 完全なApplication層
 - ドメインロジックの活用
+- クリーンアーキテクチャ的な実装
 
 ---
 
-### 🔵 Phase 3: UI層 (Medium Priority)
+### 🔵 Phase 3: UI層 (Next Priority)
 
 #### 4. Zustand ストアの実装
 **目的**: UI層での状態管理基盤構築
@@ -274,6 +295,7 @@ Sharendar MVPの実装を効率的に進めるための詳細なタスク計画�
 
 ### 🔄 次のステップ
 
-1. **Task 2**: 家族メンバー管理のユースケース実装 (Application層)
-2. **Task 3**: カレンダー・タスクのユースケース実装
-3. 段階的にPhase 3 (UI層) へ進行
+1. **Task 3**: カレンダー・タスクのユースケース実装 (Application層)
+2. **Task 4**: Zustand ストアの実装 (UI層)
+3. **Task 5**: 設定画面 (/settings) の実装 (UI層)
+4. 段階的に全てのUI機能を実装

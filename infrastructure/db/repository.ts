@@ -8,6 +8,10 @@ import type {
   TaskId,
   DateString
 } from '@/domain/shared/branded-types';
+import type { 
+  IFamilyMemberRepository,
+  FamilyMemberRepositoryError
+} from '@/domain/family/repository';
 import { 
   asMemberId,
   asEventId,
@@ -94,9 +98,10 @@ const mapTaskToDTO = (domain: Task): TaskDTO => ({
 
 /**
  * 家族メンバーリポジトリ
+ * Domain層のIFamilyMemberRepositoryインターフェースを実装
  */
-export class FamilyMemberRepository {
-  async save(member: FamilyMember): Promise<Result<void, DatabaseError>> {
+export class FamilyMemberRepository implements IFamilyMemberRepository {
+  async save(member: FamilyMember): Promise<Result<void, FamilyMemberRepositoryError>> {
     try {
       await db.familyMembers.put(mapFamilyMemberToDTO(member));
       return ok(undefined);
@@ -108,7 +113,7 @@ export class FamilyMemberRepository {
     }
   }
 
-  async findById(id: MemberId): Promise<Result<FamilyMember | null, DatabaseError>> {
+  async findById(id: MemberId): Promise<Result<FamilyMember | null, FamilyMemberRepositoryError>> {
     try {
       const dto = await db.familyMembers.get(id);
       return ok(dto ? mapFamilyMemberFromDTO(dto) : null);
@@ -120,7 +125,7 @@ export class FamilyMemberRepository {
     }
   }
 
-  async findAll(): Promise<Result<readonly FamilyMember[], DatabaseError>> {
+  async findAll(): Promise<Result<readonly FamilyMember[], FamilyMemberRepositoryError>> {
     try {
       const dtos = await db.familyMembers.toArray();
       const members = dtos.map(mapFamilyMemberFromDTO);
@@ -133,7 +138,7 @@ export class FamilyMemberRepository {
     }
   }
 
-  async delete(id: MemberId): Promise<Result<void, DatabaseError>> {
+  async delete(id: MemberId): Promise<Result<void, FamilyMemberRepositoryError>> {
     try {
       await db.familyMembers.delete(id);
       return ok(undefined);
