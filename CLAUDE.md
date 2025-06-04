@@ -77,172 +77,201 @@ npm install
 npm run dev
 ```
 
-## Architecture
+## Architecture (MVP版)
 
 ### 設計思想
-関数型ドメインモデリングの考え方を取り入れ、以下の原則に従います：
-- イミュータブルなデータ構造
-- 純粋関数を中心とした設計
-- 型による仕様の表現
-- エラーを値として扱う
-- ビジネスロジックとI/Oの分離
+関数型ドメインモデリングを採用したMVP設計：
+- **純粋関数**：副作用を分離し、ビジネスロジックを純粋に保つ
+- **イミュータブル**：すべてのデータ構造を不変に
+- **型安全**：Brand型で実行時エラーを防ぐ
+- **エラーハンドリング**：Result型でエラーを値として扱う
+- **オフラインファースト**：ローカルストレージで完結
+- **段階的拡張**：将来の機能追加を考慮した設計
 
-### 技術スタック
+### 技術スタック（MVP）
 
-#### フロントエンド
-- **Framework**: Next.js 14 (App Router)
-- **言語**: TypeScript (strict mode)
-- **スタイリング**: Tailwind CSS + shadcn/ui
-- **状態管理**: Zustand + Immer（イミュータブル更新）
-- **データフェッチ**: TanStack Query
-- **バリデーション**: Zod（スキーマファースト）
-- **エラーハンドリング**: neverthrow（Result型）
-- **日付処理**: date-fns（純粋関数）
+#### フロントエンド（単体アプリ）
+- **Framework**: Next.js 14 (Static Export)
+- **言語**: TypeScript
+- **スタイリング**: Tailwind CSS
+- **データストレージ**: IndexedDB (Dexie.js)
+- **状態管理**: Zustand
 - **PWA**: next-pwa
-
-#### バックエンド
-- **BaaS**: Supabase
-  - PostgreSQL（強い型付け）
-  - Row Level Security
-  - Edge Functions（TypeScript）
 - **OCR**: Google Cloud Vision API
 
-### ドメインモデル（関数型アプローチ）
+#### 将来の拡張（Post-MVP）
+- **認証**: Supabase Auth
+- **データ同期**: Supabase Realtime
+- **通知**: Web Push API
+
+### ドメインモデル（関数型アプローチ - MVP版）
 
 ```typescript
 // Brand Types for type safety
-type UserId = string & { readonly brand: unique symbol }
-type FamilyGroupId = string & { readonly brand: unique symbol }
-type MemberId = string & { readonly brand: unique symbol }
-type EventId = string & { readonly brand: unique symbol }
-type TaskId = string & { readonly brand: unique symbol }
+type MemberId = string & { readonly brand: unique symbol };
+type EventId = string & { readonly brand: unique symbol };
+type TaskId = string & { readonly brand: unique symbol };
+type DateString = string & { readonly brand: unique symbol }; // YYYY-MM-DD
+type TimeString = string & { readonly brand: unique symbol }; // HH:MM
 
 // Value Objects
-type Email = string & { readonly brand: unique symbol }
-type MemberName = string & { readonly brand: unique symbol }
-type Grade = 
-  | '幼稚園年少' | '幼稚園年中' | '幼稚園年長'
-  | '小1' | '小2' | '小3' | '小4' | '小5' | '小6'
-  | '中1' | '中2' | '中3'
-  | 'その他'
+type MemberName = string & { readonly brand: unique symbol };
+type EventTitle = string & { readonly brand: unique symbol };
+type TaskTitle = string & { readonly brand: unique symbol };
+type Color = string & { readonly brand: unique symbol };
 
-// Domain Events (discriminated unions)
-type FamilyEvent = 
-  | { type: 'FamilyGroupCreated'; groupId: FamilyGroupId; createdBy: UserId }
-  | { type: 'MemberAdded'; memberId: MemberId; groupId: FamilyGroupId }
-  | { type: 'MemberUpdated'; memberId: MemberId; changes: Partial<FamilyMember> }
-  | { type: 'UserInvited'; email: Email; groupId: FamilyGroupId }
+// Domain Entities (immutable)
+type FamilyMember = Readonly<{
+  id: MemberId;
+  name: MemberName;
+  avatar?: string;
+  color: Color;
+}>;
 
-// Entities (immutable records)
-type FamilyMember = {
-  readonly id: MemberId
-  readonly name: MemberName
-  readonly grade?: Grade
-  readonly avatarUrl?: string
-  readonly notes?: string
-}
+type CalendarEvent = Readonly<{
+  id: EventId;
+  title: EventTitle;
+  date: DateString;
+  time?: TimeString;
+  memberIds: ReadonlyArray<MemberId>;
+  type: 'event' | 'task';
+  memo?: string;
+}>;
 
-type CalendarEvent = {
-  readonly id: EventId
-  readonly title: string
-  readonly description?: string
-  readonly startDateTime: Date
-  readonly endDateTime?: Date
-  readonly assignedMemberIds: readonly MemberId[]
-  readonly recurrence?: RecurrenceRule
-}
+type Task = Readonly<{
+  id: TaskId;
+  title: TaskTitle;
+  dueDate?: DateString;
+  priority: Priority;
+  status: TaskStatus;
+  memberIds: ReadonlyArray<MemberId>;
+  checklist: ReadonlyArray<ChecklistItem>;
+  createdAt: DateString;
+  completedAt?: DateString;
+}>;
 
-type Task = {
-  readonly id: TaskId
-  readonly title: string
-  readonly description?: string
-  readonly dueDate?: Date
-  readonly priority: Priority
-  readonly assignedMemberIds: readonly MemberId[]
-  readonly status: TaskStatus
-  readonly checklist?: readonly ChecklistItem[]
-}
+type Priority = 'high' | 'medium' | 'low';
+type TaskStatus = 'pending' | 'completed';
 
-type Priority = 'high' | 'medium' | 'low'
-type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
-
-type ChecklistItem = {
-  readonly id: string
-  readonly title: string
-  readonly isChecked: boolean
-  readonly checkedAt?: Date
-  readonly checkedBy?: UserId
-}
+type ChecklistItem = Readonly<{
+  id: string;
+  title: string;
+  checked: boolean;
+}>;
 
 // Smart Constructors with validation
-const createEmail = (value: string): Result<Email, ValidationError> => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(value)
-    ? ok(value as Email)
-    : err({ type: 'InvalidEmail', message: 'Invalid email format' })
-}
+import { Result, ok, err } from 'neverthrow';
 
-const createMemberName = (value: string): Result<MemberName, ValidationError> => {
-  const trimmed = value.trim()
-  if (trimmed.length === 0) return err({ type: 'EmptyName', message: 'Name cannot be empty' })
-  if (trimmed.length > 50) return err({ type: 'NameTooLong', message: 'Name too long' })
-  return ok(trimmed as MemberName)
-}
+const createMemberName = (value: string): Result<MemberName, string> => {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return err('名前を入力してください');
+  if (trimmed.length > 20) return err('名前は20文字以内で入力してください');
+  return ok(trimmed as MemberName);
+};
+
+const createDateString = (value: string): Result<DateString, string> => {
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(value)) return err('日付の形式が正しくありません');
+  return ok(value as DateString);
+};
+
+const createColor = (value: string): Result<Color, string> => {
+  const colorRegex = /^#[0-9A-Fa-f]{6}$/;
+  if (!colorRegex.test(value)) return err('カラーコードの形式が正しくありません');
+  return ok(value as Color);
+};
 
 // Domain Operations (pure functions)
-const addMemberToFamily = (
-  group: FamilyGroup,
-  member: FamilyMember
-): FamilyGroup => ({
-  ...group,
-  members: [...group.members, member]
-})
+const createFamilyMember = (
+  name: MemberName,
+  color: Color,
+  avatar?: string
+): FamilyMember => ({
+  id: generateId() as MemberId,
+  name,
+  color,
+  avatar,
+});
 
-const assignTaskToMembers = (
+const assignMembersToTask = (
   task: Task,
-  memberIds: readonly MemberId[]
+  memberIds: ReadonlyArray<MemberId>
 ): Task => ({
   ...task,
-  assignedMemberIds: memberIds
-})
+  memberIds,
+});
 
-const completeChecklistItem = (
-  item: ChecklistItem,
-  userId: UserId,
-  at: Date
-): ChecklistItem => ({
-  ...item,
-  isChecked: true,
-  checkedAt: at,
-  checkedBy: userId
-})
+const completeTask = (
+  task: Task,
+  completedAt: DateString
+): Task => ({
+  ...task,
+  status: 'completed' as const,
+  completedAt,
+});
+
+const toggleChecklistItem = (
+  task: Task,
+  itemId: string
+): Task => ({
+  ...task,
+  checklist: task.checklist.map(item =>
+    item.id === itemId
+      ? { ...item, checked: !item.checked }
+      : item
+  ),
+});
+
+// ドメイン操作の例
+const taskProgress = calculateChecklistProgress(task.checklist);
+const overdueTasks = filterOverdueTasks(allTasks, today);
+const memberEvents = filterEventsByMember(allEvents, memberId);
 ```
 
-### ディレクトリ構造
+### ディレクトリ構造（MVP版）
 
 ```
-/app                    # Next.js App Router
-  /(auth)
-  /(dashboard)
-/domain                 # ドメインロジック（純粋）
-  /family
+/app                    # Next.js App Router（UI層）
+  /calendar            # カレンダー画面
+  /tasks               # タスク画面
+  /ocr                 # OCR画面
+  /settings            # 設定（家族メンバー管理）
+  page.tsx             # ダッシュボード
+/domain                # ドメイン層（純粋なビジネスロジック）
+  /family              # 家族メンバー
     /types.ts          # 型定義
-    /operations.ts     # ドメイン操作
+    /operations.ts     # ドメイン操作（純粋関数）
     /validations.ts    # バリデーション
-  /calendar
-  /tasks
-  /shared
-    /result.ts         # Result型
-    /branded-types.ts  # Brand型
-/infrastructure        # 外部サービスとの接続
-  /supabase
-  /ocr
-/application          # ユースケース
-  /family
-  /calendar
-  /tasks
+  /calendar            # カレンダー
+    /types.ts
+    /operations.ts
+    /validations.ts
+  /tasks               # タスク
+    /types.ts
+    /operations.ts
+    /validations.ts
+  /shared              # 共通
+    /branded-types.ts  # Brand型定義
+/infrastructure        # インフラ層（副作用）
+  /db                  # IndexedDB (Dexie.js)
+    /repository.ts     # Repository実装
+    /schema.ts         # DBスキーマ
+  /ocr                 # OCR処理
+    /google-vision.ts  # Google Vision API
+/application          # アプリケーション層（ユースケース）
+  /family              # 家族メンバー管理
+  /calendar            # カレンダー管理
+  /tasks               # タスク管理
 /components           # UIコンポーネント
-/lib                  # ユーティリティ
+  /calendar
+  /tasks
+  /common
+/lib                  # 共通ライブラリ
+  /store              # Zustand ストア
+  /utils              # ユーティリティ
+/public
+  /icons              # PWAアイコン
+/docs                 # ドキュメント
 ```
 
 ## Important Notes
