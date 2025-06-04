@@ -4,25 +4,32 @@
 
 ## Phase 1: Infrastructure層
 
-### Task 1: IndexedDB (Dexie.js) のセットアップとスキーマ定義
+### ✅ Task 1: IndexedDB (Dexie.js) のセットアップとスキーマ定義 **完了**
 
 #### ファイル構成
 ```
 /infrastructure/db/
-  ├── schema.ts        # DBスキーマ定義
-  ├── repository.ts    # Repository実装
-  └── migrations.ts    # マイグレーション処理
+  ├── schema.ts        # ✅ DBスキーマ定義
+  ├── repository.ts    # ✅ Repository実装
+  
+/__tests__/infrastructure/db/
+  ├── schema.test.ts      # ✅ スキーマテスト
+  └── repository.test.ts  # ✅ Repositoryテスト
+
+/vitest.config.ts        # ✅ テスト環境設定
+/test-setup.ts          # ✅ fake-indexeddb設定
 ```
 
 #### 技術要件
-- Dexie.js v4.0.0+
-- TypeScript strict mode対応
-- Result型でのエラーハンドリング
-- Brand型との統合
+- ✅ Dexie.js v4.0.0+
+- ✅ TypeScript strict mode対応
+- ✅ neverthrow Result型でのエラーハンドリング
+- ✅ Brand型との統合
+- ✅ Vitest + fake-indexeddb テスト環境
 
 #### 実装詳細
 ```typescript
-// schema.ts の基本構造
+// ✅ 実装済み: schema.ts の基本構造
 export class SharendarDB extends Dexie {
   familyMembers!: Table<FamilyMemberDTO>;
   calendarEvents!: Table<CalendarEventDTO>;
@@ -38,6 +45,13 @@ export class SharendarDB extends Dexie {
   }
 }
 ```
+
+#### 完了した成果物
+- ✅ 型安全なDB操作インターフェース
+- ✅ Domain ↔ DTO 変換機能
+- ✅ エラーハンドリング付きRepository (FamilyMemberRepository, CalendarEventRepository, TaskRepository)
+- ✅ 包括的テストスイート (20テスト全通過)
+- ✅ 開発環境でのサンプルデータ自動追加
 
 ---
 

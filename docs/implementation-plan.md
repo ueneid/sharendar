@@ -21,23 +21,25 @@ Sharendar MVPの実装を効率的に進めるための詳細なタスク計画�
 
 ### 🔴 Phase 1: Infrastructure層 (High Priority)
 
-#### 1. IndexedDB (Dexie.js) のセットアップとスキーマ定義
+#### ✅ 1. IndexedDB (Dexie.js) のセットアップとスキーマ定義 **完了**
 **目的**: ローカルデータストレージの基盤構築
 
 **詳細タスク**:
-- [ ] `/infrastructure/db/schema.ts` の実装
+- [x] `/infrastructure/db/schema.ts` の実装
   - Dexieクラスの定義
   - テーブルスキーマの設定
   - バージョン管理
-- [ ] `/infrastructure/db/repository.ts` の実装
+- [x] `/infrastructure/db/repository.ts` の実装
   - Repository実装クラス
   - CRUD操作のラッパー
-- [ ] 初期化処理とエラーハンドリング
-- [ ] マイグレーション対応
+- [x] 初期化処理とエラーハンドリング
+- [x] テスト実装とVitestセットアップ
 
 **成果物**:
-- 型安全なDB操作インターフェース
-- エラーハンドリング付きのRepository実装
+- ✅ 型安全なDB操作インターフェース
+- ✅ エラーハンドリング付きのRepository実装
+- ✅ 包括的なテストスイート (20テスト全通過)
+- ✅ fake-indexeddb使用のテスト環境
 
 ---
 
@@ -262,9 +264,16 @@ Sharendar MVPの実装を効率的に進めるための詳細なタスク計画�
 - [ ] エラーハンドリング確認
 - [ ] レスポンシブ対応確認
 
-## 次のステップ
+## 進捗状況
 
-1. Phase 1のタスク1「IndexedDB (Dexie.js) のセットアップとスキーマ定義」から開始
-2. 各タスク完了後、動作確認とテスト
-3. 問題があれば即座に修正
-4. 段階的にPhase 2、Phase 3へ進行
+### ✅ 完了済み
+- **Task 1**: IndexedDB (Dexie.js) のセットアップとスキーマ定義
+  - Infrastructure層の基盤構築完了
+  - 全20テスト通過
+  - 型安全なRepository実装
+
+### 🔄 次のステップ
+
+1. **Task 2**: 家族メンバー管理のユースケース実装 (Application層)
+2. **Task 3**: カレンダー・タスクのユースケース実装
+3. 段階的にPhase 3 (UI層) へ進行
