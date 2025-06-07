@@ -73,27 +73,44 @@ Sharendar MVPの実装を効率的に進めるための詳細なタスク計画�
 
 ---
 
-#### 🟡 3. カレンダー・タスクのユースケース実装
+#### ✅ 3. カレンダー・タスクのユースケース実装 **完了**
 **目的**: 各ドメインのユースケース層完成
 
 **詳細タスク**:
-- [ ] `/domain/calendar/` ドメイン層実装
-  - [ ] `types.ts` - イベント関連型定義
-  - [ ] `repository.ts` - Calendar Repository Interface
-  - [ ] `operations.ts` - カレンダー操作
-- [ ] `/domain/tasks/` ドメイン層実装
-  - [ ] `types.ts` - タスク関連型定義
-  - [ ] `repository.ts` - Task Repository Interface
-  - [ ] `operations.ts` - タスク操作
-- [ ] `/application/calendar/` ユースケース実装
-- [ ] `/application/tasks/` ユースケース実装
-- [ ] 相互依存関係の処理
-- [ ] DIコンテナのDIシンボル追加
+- [x] `/domain/calendar/` ドメイン層実装
+  - [x] `types.ts` - イベント関連型定義
+  - [x] `repository.ts` - Calendar Repository Interface
+  - [x] `operations.ts` - カレンダー操作（拡張）
+  - [x] `validations.ts` - カレンダーバリデーション
+- [x] `/domain/tasks/` ドメイン層実装
+  - [x] `types.ts` - タスク関連型定義
+  - [x] `repository.ts` - Task Repository Interface
+  - [x] `operations.ts` - タスク操作（拡張）
+  - [x] `validations.ts` - タスクバリデーション（拡張）
+- [x] `/application/calendar/` ユースケース実装
+  - [x] `commands.ts` - Calendar CRUD操作
+  - [x] `queries.ts` - Calendar検索・フィルタリング
+  - [x] `use-cases.ts` - CalendarEventUseCase
+  - [x] `index.ts` - エクスポート集約
+- [x] `/application/tasks/` ユースケース実装
+  - [x] `commands.ts` - Task CRUD + チェックリスト操作
+  - [x] `queries.ts` - Task検索・統計・フィルタリング
+  - [x] `use-cases.ts` - TaskUseCase
+  - [x] `index.ts` - エクスポート集約
+- [x] `/infrastructure/db/repository.ts` - Calendar/Task Repository実装
+- [x] `/infrastructure/di/bindings.ts` - Calendar/Tasks DIバインディング
+- [x] `/application/shared/types.ts` - Calendar/Tasks DIシンボル追加
+- [x] TypeScript型エラー修正完了
+- [x] 全テスト通過確認（43/43テスト）
 
 **成果物**:
-- 完全なApplication層
-- ドメインロジックの活用
-- クリーンアーキテクチャ的な実装
+- ✅ 完全なApplication層（3ドメイン統一）
+- ✅ 包括的なCQRS実装（Commands/Queries分離）
+- ✅ ドメインロジックの活用（純粋関数による操作）
+- ✅ クリーンアーキテクチャ的な実装
+- ✅ 高度な検索・フィルタリング機能
+- ✅ チェックリスト機能完全実装
+- ✅ 統計・集計機能実装
 
 ---
 
@@ -288,14 +305,41 @@ Sharendar MVPの実装を効率的に進めるための詳細なタスク計画�
 ## 進捗状況
 
 ### ✅ 完了済み
+
+#### Phase 1: Infrastructure層
 - **Task 1**: IndexedDB (Dexie.js) のセットアップとスキーマ定義
   - Infrastructure層の基盤構築完了
   - 全20テスト通過
   - 型安全なRepository実装
 
+#### Phase 2: Application層
+- **Task 2**: 家族メンバー管理のユースケース実装
+  - クリーンアーキテクチャ実装完了
+  - DIコンテナ・CQRS実装
+  - 43テスト実装・全通過
+  
+- **Task 3**: カレンダー・タスクのユースケース実装
+  - Calendar/TasksのApplication層完全実装
+  - Repository Pattern・DI統合完了
+  - 高度な検索・フィルタリング機能実装
+  - チェックリスト・統計機能実装
+
 ### 🔄 次のステップ
 
-1. **Task 3**: カレンダー・タスクのユースケース実装 (Application層)
-2. **Task 4**: Zustand ストアの実装 (UI層)
-3. **Task 5**: 設定画面 (/settings) の実装 (UI層)
-4. 段階的に全てのUI機能を実装
+#### Phase 3: UI層 (次の優先事項)
+1. **Task 4**: Zustand ストアの実装
+   - UI層状態管理とApplication層統合
+2. **Task 5**: 設定画面 (/settings) の実装
+   - 家族メンバー管理UI実装
+3. **Task 6**: カレンダーコンポーネントのリファクタリング
+   - 新アーキテクチャ対応・ストア統合
+4. **Task 7-9**: 各機能のUI実装
+   - イベント作成・編集機能
+   - タスク管理機能
+   - ダッシュボード実装
+
+### 📊 全体進捗
+- **Infrastructure層**: 100% ✅
+- **Application層**: 100% ✅  
+- **UI層**: 0% 🔵 (次の対象)
+- **付加機能**: 0% 🟢 (最終段階)
