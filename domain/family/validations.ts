@@ -38,8 +38,9 @@ export const validateAvatar = (value: string): Result<string, string> => {
     return ok(''); // 空は許可
   }
   
-  // 絵文字は1〜2文字（結合文字を考慮）
-  const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(\u200D(\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*$/u;
+  // 絵文字は1〜2文字（簡易的なチェック）
+  // 注：完全な絵文字検証は複雑なため、簡易的に実装
+  const emojiRegex = /^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]$/u;
   
   if (!emojiRegex.test(value) && value.length > 2) {
     return err('絵文字を1つ選択してください');

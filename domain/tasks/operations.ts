@@ -8,19 +8,20 @@ import { format } from 'date-fns';
  */
 
 // 新しいタスクを作成
-export const createTask = (
-  title: TaskTitle,
-  priority: Priority = 'medium',
-  dueDate?: DateString,
-  memberIds: ReadonlyArray<MemberId> = []
-): Task => ({
+export const createTask = (params: {
+  title: TaskTitle;
+  priority?: Priority;
+  dueDate?: DateString;
+  memberIds?: ReadonlyArray<MemberId>;
+  checklist?: ReadonlyArray<ChecklistItem>;
+}): Task => ({
   id: nanoid() as TaskId,
-  title,
-  priority,
+  title: params.title,
+  priority: params.priority || 'medium',
   status: 'pending',
-  dueDate,
-  memberIds,
-  checklist: [],
+  dueDate: params.dueDate,
+  memberIds: params.memberIds || [],
+  checklist: params.checklist || [],
   createdAt: format(new Date(), 'yyyy-MM-dd') as DateString,
 });
 
@@ -152,4 +153,55 @@ export const calculateChecklistProgress = (
   if (checklist.length === 0) return 100;
   const checkedCount = checklist.filter(item => item.checked).length;
   return Math.round((checkedCount / checklist.length) * 100);
+};
+
+// メンバーIDを更新
+export const updateTaskMemberIds = (
+  task: Task,
+  memberIds: ReadonlyArray<MemberId>
+): Task => ({
+  ...task,
+  memberIds,
+});
+
+// チェックリストアイテムを更新
+export const updateChecklistItem = (
+  task: Task,
+  itemId: string,
+  title: string
+): Task => ({
+  ...task,
+  checklist: task.checklist.map(item =>
+    item.id === itemId
+      ? { ...item, title }
+      : item
+  ),
+});
+
+// タスクを再開
+export const reopenTask = (
+  task: Task
+): Task => ({
+  ...task,
+  status: 'pending' as const,
+  completedAt: undefined,
+});
+
+// チェックリストアイテムを作成
+export const createChecklistItem = (
+  title: string
+): ChecklistItem => ({
+  id: nanoid(),
+  title,
+  checked: false,
+});
+
+// タスクが期限切れかチェック
+export const isTaskOverdue = (
+  task: Task,
+  currentDate: DateString
+): boolean => {
+  return task.status === 'pending' && 
+         task.dueDate !== undefined && 
+         task.dueDate < currentDate;
 };

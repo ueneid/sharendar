@@ -7,21 +7,21 @@ import { nanoid } from 'nanoid';
  */
 
 // 新しいカレンダーイベントを作成
-export const createCalendarEvent = (
-  title: EventTitle,
-  date: DateString,
-  type: EventType,
-  time?: TimeString,
-  memberIds: ReadonlyArray<MemberId> = [],
-  memo?: string
-): CalendarEvent => ({
+export const createCalendarEvent = (params: {
+  title: EventTitle;
+  date: DateString;
+  type?: EventType;
+  time?: TimeString;
+  memberIds?: ReadonlyArray<MemberId>;
+  memo?: string;
+}): CalendarEvent => ({
   id: nanoid() as EventId,
-  title,
-  date,
-  type,
-  time,
-  memberIds,
-  memo,
+  title: params.title,
+  date: params.date,
+  type: params.type || 'event',
+  time: params.time,
+  memberIds: params.memberIds || [],
+  memo: params.memo,
 });
 
 // イベントのタイトルを更新
@@ -94,4 +94,47 @@ export const filterEventsByDateRange = (
   return events.filter(event => 
     event.date >= startDate && event.date <= endDate
   );
+};
+
+// メンバーIDを更新
+export const updateEventMemberIds = (
+  event: CalendarEvent,
+  memberIds: ReadonlyArray<MemberId>
+): CalendarEvent => ({
+  ...event,
+  memberIds,
+});
+
+// イベントタイプを更新
+export const updateEventType = (
+  event: CalendarEvent,
+  type: EventType
+): CalendarEvent => ({
+  ...event,
+  type,
+});
+
+// 時間をクリア
+export const clearEventTime = (
+  event: CalendarEvent
+): CalendarEvent => ({
+  ...event,
+  time: undefined,
+});
+
+// イベントが特定の日付にあるかチェック
+export const isEventOnDate = (
+  event: CalendarEvent,
+  date: DateString
+): boolean => {
+  return event.date === date;
+};
+
+// イベントが日付範囲内にあるかチェック
+export const isEventInDateRange = (
+  event: CalendarEvent,
+  startDate: DateString,
+  endDate: DateString
+): boolean => {
+  return event.date >= startDate && event.date <= endDate;
 };

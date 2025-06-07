@@ -199,6 +199,52 @@ export class CalendarEventRepository {
     }
   }
 
+  async findAll(): Promise<Result<readonly CalendarEvent[], DatabaseError>> {
+    try {
+      const dtos = await db.calendarEvents.toArray();
+      const events = dtos.map(mapCalendarEventFromDTO);
+      return ok(events);
+    } catch (error) {
+      return err({
+        type: 'DatabaseError',
+        message: `カレンダーイベント一覧の取得に失敗しました: ${error}`
+      });
+    }
+  }
+
+  async findByDate(date: DateString): Promise<Result<readonly CalendarEvent[], DatabaseError>> {
+    try {
+      const dtos = await db.calendarEvents
+        .where('date')
+        .equals(date)
+        .toArray();
+      
+      const events = dtos.map(mapCalendarEventFromDTO);
+      return ok(events);
+    } catch (error) {
+      return err({
+        type: 'DatabaseError',
+        message: `カレンダーイベントの日付検索に失敗しました: ${error}`
+      });
+    }
+  }
+
+  async findByMemberId(memberId: MemberId): Promise<Result<readonly CalendarEvent[], DatabaseError>> {
+    try {
+      const dtos = await db.calendarEvents
+        .filter(event => event.memberIds.includes(memberId))
+        .toArray();
+      
+      const events = dtos.map(mapCalendarEventFromDTO);
+      return ok(events);
+    } catch (error) {
+      return err({
+        type: 'DatabaseError',
+        message: `メンバーのカレンダーイベント検索に失敗しました: ${error}`
+      });
+    }
+  }
+
   async delete(id: EventId): Promise<Result<void, DatabaseError>> {
     try {
       await db.calendarEvents.delete(id);
@@ -266,6 +312,76 @@ export class TaskRepository {
       return err({
         type: 'DatabaseError',
         message: `ステータス別タスク検索に失敗しました: ${error}`
+      });
+    }
+  }
+
+  async findByDueDate(dueDate: DateString): Promise<Result<readonly Task[], DatabaseError>> {
+    try {
+      const dtos = await db.tasks
+        .where('dueDate')
+        .equals(dueDate)
+        .toArray();
+      
+      const tasks = dtos.map(mapTaskFromDTO);
+      return ok(tasks);
+    } catch (error) {
+      return err({
+        type: 'DatabaseError',
+        message: `期限日別タスク検索に失敗しました: ${error}`
+      });
+    }
+  }
+
+  async findByDueDateRange(
+    startDate: DateString, 
+    endDate: DateString
+  ): Promise<Result<readonly Task[], DatabaseError>> {
+    try {
+      const dtos = await db.tasks
+        .where('dueDate')
+        .between(startDate, endDate, true, true)
+        .toArray();
+      
+      const tasks = dtos.map(mapTaskFromDTO);
+      return ok(tasks);
+    } catch (error) {
+      return err({
+        type: 'DatabaseError',
+        message: `期限日範囲別タスク検索に失敗しました: ${error}`
+      });
+    }
+  }
+
+  async findByMemberId(memberId: MemberId): Promise<Result<readonly Task[], DatabaseError>> {
+    try {
+      const dtos = await db.tasks
+        .filter(task => task.memberIds.includes(memberId))
+        .toArray();
+      
+      const tasks = dtos.map(mapTaskFromDTO);
+      return ok(tasks);
+    } catch (error) {
+      return err({
+        type: 'DatabaseError',
+        message: `メンバー別タスク検索に失敗しました: ${error}`
+      });
+    }
+  }
+
+  async findByPriority(priority: 'high' | 'medium' | 'low'): Promise<Result<readonly Task[], DatabaseError>> {
+    try {
+      const dtos = await db.tasks
+        .where('priority')
+        .equals(priority)
+        .toArray();
+      
+      const tasks = dtos.map(mapTaskFromDTO);
+      return ok(tasks);
+    } catch (error) {
+      return err({
+        type: 'DatabaseError',
+        message: `優先度別タスク検索に失敗しました: ${error}`
       });
     }
   }
