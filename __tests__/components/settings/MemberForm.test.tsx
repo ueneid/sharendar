@@ -13,6 +13,7 @@ import { MemberForm } from '@/app/settings/components/MemberForm';
 const mockCreateMember = vi.fn();
 const mockUpdateMember = vi.fn();
 const mockCloseMemberForm = vi.fn();
+const mockSetError = vi.fn();
 
 vi.mock('@/lib/store', () => ({
   useFamilyMemberStore: () => ({
@@ -27,7 +28,7 @@ vi.mock('@/lib/store', () => ({
   useFamilyMemberAsync: () => ({
     loading: false,
     error: null,
-    setError: vi.fn(),
+    setError: mockSetError,
   }),
 }));
 
@@ -98,18 +99,19 @@ describe('MemberForm', () => {
       const user = userEvent.setup();
       render(<MemberForm />);
       
-      // Select blue color
-      const blueColorOption = screen.getByLabelText('#3B82F6');
-      await user.click(blueColorOption);
+      // Select red color
+      const redColorButton = screen.getByLabelText('カラー #ef4444');
+      await user.click(redColorButton);
       
-      expect(blueColorOption).toBeChecked();
+      // Check if the color is visually selected (has different border)
+      expect(redColorButton).toHaveClass('border-gray-400');
     });
 
     it('should have blue as default selected color', () => {
       render(<MemberForm />);
       
-      const blueColorOption = screen.getByLabelText('#3B82F6');
-      expect(blueColorOption).toBeChecked();
+      const blueColorButton = screen.getByLabelText('カラー #3b82f6');
+      expect(blueColorButton).toHaveClass('border-gray-400');
     });
   });
 
@@ -122,15 +124,15 @@ describe('MemberForm', () => {
       await user.type(nameInput, '太郎');
       
       // Select red color
-      const redColorOption = screen.getByLabelText('#EF4444');
-      await user.click(redColorOption);
+      const redColorButton = screen.getByLabelText('カラー #ef4444');
+      await user.click(redColorButton);
       
       const submitButton = screen.getByRole('button', { name: /追加/i });
       await user.click(submitButton);
       
       await waitFor(() => {
         expect(mockCreateMember).toHaveBeenCalledWith('太郎', {
-          color: '#EF4444',
+          color: '#ef4444',
         });
       });
     });
