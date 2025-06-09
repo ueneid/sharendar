@@ -24,3 +24,6 @@ global.IDBRequest = require('fake-indexeddb/lib/FDBRequest');
 global.IDBCursor = require('fake-indexeddb/lib/FDBCursor');
 // @ts-ignore
 global.IDBCursorWithValue = require('fake-indexeddb/lib/FDBCursorWithValue');
+
+// Testing Library setup
+import '@testing-library/jest-dom';

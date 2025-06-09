@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
 import { useFamilyMemberStore, useFamilyMemberForm, useFamilyMemberAsync } from '@/lib/store';
 
@@ -127,7 +127,7 @@ export const MemberForm = () => {
         </div>
 
         {/* フォーム */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-6">
+        <form onSubmit={handleSubmit} className="p-4 space-y-6" role="form">
           {/* エラー表示 */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-md p-3">

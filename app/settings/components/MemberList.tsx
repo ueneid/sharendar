@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Edit2, Trash2, Plus, Users } from 'lucide-react';
 import { useFamilyMembers, useFamilyMemberStore, useFamilyMemberForm } from '@/lib/store';
 import type { FamilyMember } from '@/domain/family/types';
