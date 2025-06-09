@@ -5,6 +5,7 @@
 // ストア
 export { useFamilyMemberStore } from './family-store';
 export { useCalendarStore } from './calendar-store';
+export { useTaskStore } from './tasks-store';
 
 // セレクター
 export {
@@ -23,6 +24,17 @@ export {
   useEventForm,
   useCalendarAsync,
 } from './calendar-store';
+
+export {
+  useTasks,
+  useFilteredTasks,
+  useSelectedTask,
+  useTaskFilter,
+  useTaskForm,
+  useTaskAsync,
+  useOverdueTasks,
+  useTasksByMember,
+} from './tasks-store';
 
 // 型定義
 export type {

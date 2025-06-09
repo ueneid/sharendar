@@ -9,3 +9,6 @@ export type FamilyMember = Readonly<{
   avatar?: string; // 絵文字 or アイコンID
   color: Color;
 }>;
+
+// エクスポート
+export type { MemberId };

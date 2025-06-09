@@ -12,6 +12,8 @@ export interface UIState {
 export interface AsyncState {
   loading: boolean;
   error: string | null;
+  setError: (error: string | null) => void;
+  reset: () => void;
 }
 
 // リセット可能なストアの基本インターフェース

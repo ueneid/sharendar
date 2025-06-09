@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Edit",
-      "Write"
+      "Write",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

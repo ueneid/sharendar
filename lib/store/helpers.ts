@@ -6,62 +6,58 @@ import type { AsyncState, AsyncActions } from './types';
 
 // 非同期状態管理のヘルパー
 export const createAsyncActions = <T extends AsyncState>(
-  set: (partial: Partial<T>) => void,
-  get: () => T
-): AsyncActions<T> => ({
-  setLoading: (loading: boolean) => set({ loading } as Partial<T>),
-  
-  setError: (error: string | null) => set({ error } as Partial<T>),
-  
-  handleAsyncOperation: async <R>(
-    operation: () => Promise<R>,
-    onSuccess?: (result: R) => void,
-    onError?: (error: string) => void
-  ) => {
-    const { setLoading, setError } = createAsyncActions(set, get);
-    
+  set: (partial: Partial<T>) => void
+): {
+  execute: (operation: () => Promise<void>) => Promise<void>;
+} => ({
+  execute: async (operation: () => Promise<void>) => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      const result = await operation();
-      
-      if (onSuccess) {
-        onSuccess(result);
-      }
+      set({ loading: true, error: null } as Partial<T>);
+      await operation();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
-      setError(errorMessage);
-      
-      if (onError) {
-        onError(errorMessage);
-      }
+      const errorMessage = normalizeError(error);
+      set({ error: errorMessage } as Partial<T>);
+      throw error;
     } finally {
-      setLoading(false);
+      set({ loading: false } as Partial<T>);
     }
   },
 });
 
 // 楽観的更新のヘルパー
-export const createOptimisticState = <T extends { id: string }>(
-  items: T[]
-): {
-  items: T[];
-  optimisticAdd: (item: T) => T[];
-  optimisticUpdate: (id: string, updates: Partial<T>) => T[];
-  optimisticRemove: (id: string) => T[];
-} => ({
-  items,
-  
-  optimisticAdd: (item: T) => [...items, item],
-  
-  optimisticUpdate: (id: string, updates: Partial<T>) =>
-    items.map(item => 
-      item.id === id ? { ...item, ...updates } : item
-    ),
-  
-  optimisticRemove: (id: string) =>
-    items.filter(item => item.id !== id),
+export const createOptimisticState = <TData, TState extends AsyncState>(
+  set: (partial: Partial<TState>) => void,
+  getter: (state: TState) => TData,
+  setter: (state: TState, data: TData) => Partial<TState>
+) => ({
+  executeOptimistic: async <TResult>(
+    optimisticUpdate: (current: TData) => TData,
+    serverOperation: () => Promise<TResult>,
+    onSuccess: (result: TResult, current: TData) => TData
+  ) => {
+    const currentState = getter({} as TState);
+    const optimisticData = optimisticUpdate(currentState);
+    
+    // 楽観的更新を適用
+    set(setter({} as TState, optimisticData));
+    
+    try {
+      set({ loading: true, error: null } as Partial<TState>);
+      const result = await serverOperation();
+      
+      // 成功時の最終状態を設定
+      const finalData = onSuccess(result, optimisticData);
+      set({ ...setter({} as TState, finalData), loading: false } as Partial<TState>);
+    } catch (error) {
+      // エラー時は元の状態に戻す
+      set({
+        ...setter({} as TState, currentState),
+        loading: false,
+        error: normalizeError(error)
+      } as Partial<TState>);
+      throw error;
+    }
+  }
 });
 
 // エラーメッセージの正規化
@@ -81,4 +77,6 @@ export const generateTempId = (): string => `temp_${Date.now()}_${Math.random()}
 export const createInitialAsyncState = (): AsyncState => ({
   loading: false,
   error: null,
+  setError: (error: string | null) => {},
+  reset: () => {},
 });

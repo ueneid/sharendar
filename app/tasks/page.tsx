@@ -1,220 +1,208 @@
-"use client";
+'use client';
 
-import MobileLayout from "@/components/layout/MobileLayout";
-import { CheckIcon, ClockIcon, AlertCircleIcon, PlusIcon } from "lucide-react";
-import { useState } from "react";
-
-type TaskStatus = "pending" | "completed";
-type TaskPriority = "high" | "medium" | "low";
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  dueDate?: string;
-  priority: TaskPriority;
-  status: TaskStatus;
-  assignedTo: string[];
-  checklist?: { id: string; title: string; checked: boolean }[];
-}
-
-const mockTasks: Task[] = [
-  {
-    id: "1",
-    title: "遠足の準備",
-    description: "明日の遠足に必要な持ち物を準備する",
-    dueDate: "2024-03-15",
-    priority: "high",
-    status: "pending",
-    assignedTo: ["太郎"],
-    checklist: [
-      { id: "1-1", title: "お弁当", checked: true },
-      { id: "1-2", title: "水筒", checked: true },
-      { id: "1-3", title: "レジャーシート", checked: false },
-      { id: "1-4", title: "おやつ（300円まで）", checked: false },
-    ],
-  },
-  {
-    id: "2",
-    title: "体操服を洗う",
-    description: "",
-    dueDate: "2024-03-16",
-    priority: "medium",
-    status: "pending",
-    assignedTo: ["ママ"],
-  },
-  {
-    id: "3",
-    title: "習字道具の確認",
-    description: "墨汁の残量をチェック",
-    dueDate: "2024-03-18",
-    priority: "low",
-    status: "completed",
-    assignedTo: ["花子"],
-  },
-];
+import { useEffect } from 'react';
+import { CheckSquare, Plus, Filter as FilterIcon, AlertCircle } from 'lucide-react';
+import { useTaskStore, useFilteredTasks, useTaskAsync, useOverdueTasks } from '@/lib/store/tasks-store';
+import { useFamilyMemberStore } from '@/lib/store';
+import { TaskCard } from './components/TaskCard';
+import { TaskForm } from './components/TaskForm';
+import { TaskFilter } from './components/TaskFilter';
 
 export default function TasksPage() {
-  const [tasks] = useState<Task[]>(mockTasks);
-  const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
+  const { loadTasks, openTaskForm, setFilter } = useTaskStore();
+  const { loadMembers } = useFamilyMemberStore();
+  const { loading, error } = useTaskAsync();
+  const filteredTasks = useFilteredTasks();
+  const overdueTasks = useOverdueTasks();
+  
+  // 初期データロード
+  useEffect(() => {
+    loadMembers();
+    loadTasks();
+  }, [loadMembers, loadTasks]);
 
-  const filteredTasks = tasks.filter((task) => {
-    if (filter === "all") return true;
-    return task.status === filter;
-  });
-
-  const getPriorityColor = (priority: TaskPriority) => {
-    switch (priority) {
-      case "high":
-        return "text-blue-700 bg-blue-100";
-      case "medium":
-        return "text-blue-600 bg-blue-50";
-      case "low":
-        return "text-blue-500 bg-blue-50";
-    }
+  const handleAddTask = () => {
+    openTaskForm();
   };
 
-  const getPriorityIcon = (priority: TaskPriority) => {
-    switch (priority) {
-      case "high":
-        return <AlertCircleIcon className="w-4 h-4" />;
-      case "medium":
-        return <ClockIcon className="w-4 h-4" />;
-      case "low":
-        return <CheckIcon className="w-4 h-4" />;
-    }
+  const handleShowOverdue = () => {
+    setFilter({ 
+      status: 'pending',
+      dueDateRange: {
+        end: new Date().toISOString().split('T')[0] as any
+      }
+    });
   };
+
+  const pendingTasks = filteredTasks.filter(task => task.status === 'pending');
+  const completedTasks = filteredTasks.filter(task => task.status === 'completed');
 
   return (
-    <MobileLayout title="タスク">
-      <div className="bg-white border-b border-gray-200">
-        <div className="flex space-x-4 px-4 py-2">
-          <button
-            onClick={() => setFilter("all")}
-            className={`text-sm font-medium pb-2 border-b-2 ${
-              filter === "all"
-                ? "text-primary-600 border-primary-600"
-                : "text-gray-500 border-transparent"
-            }`}
-          >
-            すべて
-          </button>
-          <button
-            onClick={() => setFilter("pending")}
-            className={`text-sm font-medium pb-2 border-b-2 ${
-              filter === "pending"
-                ? "text-primary-600 border-primary-600"
-                : "text-gray-500 border-transparent"
-            }`}
-          >
-            未完了
-          </button>
-          <button
-            onClick={() => setFilter("completed")}
-            className={`text-sm font-medium pb-2 border-b-2 ${
-              filter === "completed"
-                ? "text-primary-600 border-primary-600"
-                : "text-gray-500 border-transparent"
-            }`}
-          >
-            完了
-          </button>
-        </div>
-      </div>
-
-      <div className="divide-y divide-gray-200">
-        {filteredTasks.map((task) => (
-          <div key={task.id} className="bg-white p-4">
-            <div className="flex items-start space-x-3">
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full ${getPriorityColor(
-                  task.priority
-                )}`}
+    <div className="min-h-screen bg-gray-50">
+      {/* ヘッダー */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CheckSquare className="w-6 h-6 text-blue-600" />
+              <h1 className="text-xl font-semibold text-gray-900">タスク管理</h1>
+            </div>
+            
+            {/* 期限切れアラート */}
+            {overdueTasks.length > 0 && (
+              <button
+                onClick={handleShowOverdue}
+                className="flex items-center space-x-1 px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
               >
-                {getPriorityIcon(task.priority)}
-              </div>
-              <div className="flex-1">
-                <h3
-                  className={`font-medium ${
-                    task.status === "completed"
-                      ? "text-gray-500 line-through"
-                      : "text-gray-900"
-                  }`}
-                >
-                  {task.title}
-                </h3>
-                {task.description && (
-                  <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-                )}
-                <div className="flex items-center space-x-4 mt-2">
-                  {task.dueDate && (
-                    <span className="text-xs text-gray-500">
-                      期限: {new Date(task.dueDate).toLocaleDateString("ja-JP")}
-                    </span>
-                  )}
-                  <div className="flex -space-x-2">
-                    {task.assignedTo.map((person, index) => (
-                      <div
-                        key={index}
-                        className="w-6 h-6 rounded-full bg-secondary-100 border-2 border-white flex items-center justify-center"
-                      >
-                        <span className="text-xs font-medium text-secondary-700">
-                          {person[0]}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">
+                  期限切れ {overdueTasks.length}件
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* メインコンテンツ */}
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        {/* エラー表示 */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+            <h3 className="font-medium text-red-800 mb-1">エラーが発生しました</h3>
+            <p className="text-red-600 text-sm">{error}</p>
+            <button
+              onClick={loadTasks}
+              className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+            >
+              再試行
+            </button>
+          </div>
+        )}
+
+        {/* レイアウト */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* サイドバー（デスクトップ） */}
+          <div className="hidden lg:block">
+            <TaskFilter />
+            
+            {/* 統計情報 */}
+            <div className="mt-6 bg-white rounded-lg shadow-sm p-4">
+              <h3 className="font-medium text-gray-900 mb-3">統計</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">未完了</span>
+                  <span className="font-medium">{pendingTasks.length}</span>
                 </div>
-                
-                {task.checklist && (
-                  <div className="mt-3 space-y-1">
-                    {task.checklist.map((item) => (
-                      <label
-                        key={item.id}
-                        className="flex items-center space-x-2"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={item.checked}
-                          className="w-4 h-4 text-primary-600 rounded"
-                          readOnly
-                        />
-                        <span
-                          className={`text-sm ${
-                            item.checked
-                              ? "text-gray-500 line-through"
-                              : "text-gray-700"
-                          }`}
-                        >
-                          {item.title}
-                        </span>
-                      </label>
-                    ))}
-                    <div className="mt-2">
-                      <div className="bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-primary-500 h-2 rounded-full"
-                          style={{
-                            width: `${
-                              (task.checklist.filter((i) => i.checked).length /
-                                task.checklist.length) *
-                              100
-                            }%`,
-                          }}
-                        />
-                      </div>
-                    </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">完了</span>
+                  <span className="font-medium text-green-600">{completedTasks.length}</span>
+                </div>
+                {overdueTasks.length > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-red-600">期限切れ</span>
+                    <span className="font-medium text-red-600">{overdueTasks.length}</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
-        ))}
-      </div>
 
-      <button className="fixed bottom-20 right-4 bg-primary-500 text-white rounded-full p-3 shadow-lg">
-        <PlusIcon className="w-6 h-6" />
+          {/* メインエリア */}
+          <div className="lg:col-span-3">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">読み込み中...</span>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* 未完了タスク */}
+                {pendingTasks.length > 0 && (
+                  <div className="bg-white rounded-lg shadow-sm">
+                    <div className="p-4 border-b border-gray-200">
+                      <h2 className="text-lg font-medium text-gray-900">
+                        未完了のタスク ({pendingTasks.length})
+                      </h2>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      {pendingTasks.map((task) => (
+                        <div key={task.id} className="p-4">
+                          <TaskCard task={task} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 完了タスク */}
+                {completedTasks.length > 0 && (
+                  <details className="bg-white rounded-lg shadow-sm">
+                    <summary className="p-4 cursor-pointer flex items-center justify-between hover:bg-gray-50">
+                      <h2 className="text-lg font-medium text-gray-900">
+                        完了したタスク ({completedTasks.length})
+                      </h2>
+                    </summary>
+                    <div className="border-t border-gray-200 divide-y divide-gray-200">
+                      {completedTasks.map((task) => (
+                        <div key={task.id} className="p-4">
+                          <TaskCard task={task} />
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+
+                {/* 空の状態 */}
+                {filteredTasks.length === 0 && !loading && (
+                  <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+                    <CheckSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      タスクがありません
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      新しいタスクを追加して始めましょう
+                    </p>
+                    <button
+                      onClick={handleAddTask}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      最初のタスクを追加
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* モバイル用フィルター */}
+        <div className="lg:hidden mt-6">
+          <details className="bg-white rounded-lg shadow-sm">
+            <summary className="p-4 cursor-pointer flex items-center justify-between">
+              <span className="font-medium flex items-center">
+                <FilterIcon className="w-4 h-4 mr-2" />
+                フィルター
+              </span>
+            </summary>
+            <div className="border-t">
+              <TaskFilter />
+            </div>
+          </details>
+        </div>
+      </main>
+
+      {/* フローティングアクションボタン */}
+      <button
+        onClick={handleAddTask}
+        className="fixed bottom-20 right-4 lg:bottom-8 lg:right-8 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 transition-colors"
+        aria-label="タスク追加"
+      >
+        <Plus className="w-6 h-6" />
       </button>
-    </MobileLayout>
+
+      {/* モーダル */}
+      <TaskForm />
+    </div>
   );
 }
