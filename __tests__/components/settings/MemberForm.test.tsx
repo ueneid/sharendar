@@ -73,34 +73,48 @@ describe('MemberForm', () => {
       expect(submitButton).toBeDisabled();
     });
 
-    it('should show validation error when name is too long', async () => {
+    it('should respect maxLength attribute preventing long names', async () => {
+      const user = userEvent.setup();
+      render(<MemberForm />);
+      
+      const nameInput = screen.getByLabelText(/名前/i) as HTMLInputElement;
+      
+      // Try to type more than 20 characters
+      await user.type(nameInput, 'a'.repeat(25));
+      
+      // Input should be limited to 20 characters due to maxLength
+      expect(nameInput.value).toHaveLength(20);
+      expect(nameInput.value).toBe('a'.repeat(20));
+    });
+
+    it('should disable submit button when name contains only spaces', async () => {
       const user = userEvent.setup();
       render(<MemberForm />);
       
       const nameInput = screen.getByLabelText(/名前/i);
-      await user.type(nameInput, 'a'.repeat(21)); // 21 characters (over limit)
+      // Type only spaces
+      await user.type(nameInput, '   ');
       
       const submitButton = screen.getByRole('button', { name: /追加/i });
-      await user.click(submitButton);
+      // Button should be disabled because name.trim() is empty
+      expect(submitButton).toBeDisabled();
+    });
+
+    it('should show validation error when form validation fails', async () => {
+      const user = userEvent.setup();
+      render(<MemberForm />);
+      
+      const nameInput = screen.getByLabelText(/名前/i) as HTMLInputElement;
+      
+      // Use fireEvent to bypass maxLength and set a long value
+      fireEvent.change(nameInput, { target: { value: 'a'.repeat(21) } });
+      
+      // Submit the form to trigger validation
+      const form = screen.getByRole('form');
+      fireEvent.submit(form);
       
       await waitFor(() => {
         expect(screen.getByText('名前は20文字以内で入力してください')).toBeInTheDocument();
-      });
-    });
-
-    it('should show validation error when submitting empty trimmed name', async () => {
-      const user = userEvent.setup();
-      render(<MemberForm />);
-      
-      const nameInput = screen.getByLabelText(/名前/i);
-      // Type some spaces to enable the button, then submit
-      await user.type(nameInput, '   '); // only spaces
-      
-      const submitButton = screen.getByRole('button', { name: /追加/i });
-      await user.click(submitButton);
-      
-      await waitFor(() => {
-        expect(screen.getByText('名前を入力してください')).toBeInTheDocument();
       });
     });
 
@@ -115,7 +129,10 @@ describe('MemberForm', () => {
       await user.click(submitButton);
       
       await waitFor(() => {
-        expect(mockCreateMember).toHaveBeenCalledWith('太郎', expect.any(Object));
+        expect(mockCreateMember).toHaveBeenCalledWith('太郎', expect.objectContaining({
+          color: expect.any(String),
+          avatar: undefined
+        }));
       });
     });
   });
@@ -170,8 +187,13 @@ describe('MemberForm', () => {
 
       render(<MemberForm />);
       
-      const submitButton = screen.getByRole('button', { name: /追加/i });
+      // Find submit button by type attribute since text changes during loading
+      const buttons = screen.getAllByRole('button');
+      const submitButton = buttons.find(btn => btn.getAttribute('type') === 'submit');
       expect(submitButton).toBeDisabled();
+      
+      // Check that the spinner is present
+      expect(document.querySelector('.animate-spin')).toBeInTheDocument();
     });
 
     it('should display error message when submission fails', () => {
