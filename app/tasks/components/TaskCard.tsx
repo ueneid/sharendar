@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Clock, Users, FileText, Edit2, Trash2, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import type { Task } from '@/domain/tasks/types';
 import { useFamilyMembers } from '@/lib/store';
