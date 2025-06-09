@@ -15,7 +15,7 @@ const navItems = [
   { href: "/tasks", label: "タスク", icon: CheckSquareIcon },
   { href: "/ocr", label: "撮影", icon: CameraIcon },
   { href: "/family", label: "家族", icon: UsersIcon },
-  { href: "/profile", label: "設定", icon: UserCircleIcon },
+  { href: "/settings", label: "設定", icon: UserCircleIcon },
 ];
 
 export default function BottomNavigation() {

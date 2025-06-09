@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
+import { DIProvider } from "@/components/providers/DIProvider";
 
 const notoSansJP = Noto_Sans_JP({ 
   subsets: ["latin"],
@@ -30,7 +31,9 @@ export default function RootLayout({
   return (
     <html lang="ja" className="h-full">
       <body className={`${notoSansJP.variable} font-sans h-full`}>
-        {children}
+        <DIProvider>
+          {children}
+        </DIProvider>
       </body>
     </html>
   );

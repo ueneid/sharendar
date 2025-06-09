@@ -3,7 +3,7 @@
  * アプリケーション起動時に一度だけ実行
  */
 
-import { container } from '@/application/shared/container';
+import { container as appContainer } from '@/application/shared/container';
 import { configureContainer } from './bindings';
 
 /**
@@ -12,12 +12,15 @@ import { configureContainer } from './bindings';
  */
 export const initializeContainer = (): void => {
   // Infrastructure層の具体的な実装をバインド
-  configureContainer(container);
+  configureContainer(appContainer);
 };
 
 /**
  * 初期化済みのコンテナを取得
  */
 export const getInitializedContainer = () => {
-  return container;
+  return appContainer;
 };
+
+// コンテナのエクスポート
+export { appContainer as container };
