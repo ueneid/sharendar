@@ -65,14 +65,33 @@ export const useFamilyMemberStore = create<FamilyMemberState>()(
         // データ操作
         loadMembers: async () => {
           await asyncActions.execute(async () => {
-            const useCase = getFamilyMemberUseCase();
-            const result = await useCase.getAllMembers();
-            
-            if (result.isErr()) {
-              throw new Error(result.error.message);
+            try {
+              const useCase = getFamilyMemberUseCase();
+              const result = await useCase.getAllMembers();
+              
+              if (result.isErr()) {
+                // DB接続エラーの場合は再試行
+                if (result.error.message.includes('DatabaseClosedError')) {
+                  console.warn('Database connection closed, retrying...');
+                  // 少し待ってから再試行
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                  const retryResult = await useCase.getAllMembers();
+                  if (retryResult.isErr()) {
+                    throw new Error(retryResult.error.message);
+                  }
+                  set({ members: retryResult.value });
+                  return;
+                }
+                throw new Error(result.error.message);
+              }
+              
+              set({ members: result.value });
+            } catch (error) {
+              console.error('Failed to load family members:', error);
+              // エラー時は空配列を設定
+              set({ members: [] });
+              throw error;
             }
-            
-            set({ members: result.value });
           });
         },
         

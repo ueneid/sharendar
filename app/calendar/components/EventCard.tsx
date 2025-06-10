@@ -1,41 +1,42 @@
 'use client';
 
 import { Clock, Users, FileText, Edit2, Trash2 } from 'lucide-react';
-import type { CalendarEvent } from '@/domain/calendar/types';
+import type { Activity } from '@/domain/activity/types';
 import { useFamilyMembers } from '@/lib/store';
-import { useCalendarStore } from '@/lib/store/calendar-store';
 
 interface EventCardProps {
-  event: CalendarEvent;
+  activity: Activity;
   showDate?: boolean;
   compact?: boolean;
 }
 
-export const EventCard = ({ event, showDate = false, compact = false }: EventCardProps) => {
-  const { openEventForm, deleteEvent, selectEvent } = useCalendarStore();
+export const EventCard = ({ activity, showDate = false, compact = false }: EventCardProps) => {
   const familyMembers = useFamilyMembers();
 
-  const assignedMembers = event.memberIds
+  const assignedMembers = activity.memberIds
     .map(id => familyMembers.find(member => member.id === id))
     .filter((member): member is NonNullable<typeof member> => member !== undefined);
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openEventForm(event);
+    // TODO: 統一Activityフォームでの編集
+    console.log('編集:', activity.title);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm(`「${event.title}」を削除しますか？`)) {
-      await deleteEvent(event.id);
+    if (window.confirm(`「${activity.title}」を削除しますか？`)) {
+      // TODO: ActivityStoreでの削除
+      console.log('削除:', activity.title);
     }
   };
 
   const handleClick = () => {
-    selectEvent(event.id);
+    // TODO: Activity詳細表示
+    console.log('選択:', activity.title);
   };
 
-  const eventTypeStyle = event.type === 'task' 
+  const eventTypeStyle = activity.category === 'task' 
     ? 'border-l-4 border-l-amber-400 bg-amber-50' 
     : 'border-l-4 border-l-blue-400 bg-blue-50';
 
@@ -48,12 +49,12 @@ export const EventCard = ({ event, showDate = false, compact = false }: EventCar
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">
-              {event.title}
+              {activity.title}
             </p>
-            {event.time && (
+            {activity.startTime && (
               <p className="text-xs text-gray-500">
                 <Clock className="inline w-3 h-3 mr-1" />
-                {event.time}
+                {activity.startTime}
               </p>
             )}
           </div>
@@ -89,10 +90,10 @@ export const EventCard = ({ event, showDate = false, compact = false }: EventCar
       {/* ヘッダー */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
-          <h3 className="font-medium text-gray-900">{event.title}</h3>
+          <h3 className="font-medium text-gray-900">{activity.title}</h3>
           {showDate && (
             <p className="text-sm text-gray-600 mt-1">
-              {new Date(event.date).toLocaleDateString('ja-JP', {
+              {activity.startDate && new Date(activity.startDate).toLocaleDateString('ja-JP', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -122,10 +123,10 @@ export const EventCard = ({ event, showDate = false, compact = false }: EventCar
       {/* 詳細情報 */}
       <div className="space-y-2">
         {/* 時刻 */}
-        {event.time && (
+        {activity.startTime && (
           <div className="flex items-center text-sm text-gray-600">
             <Clock className="w-4 h-4 mr-2" />
-            <span>{event.time}</span>
+            <span>{activity.startTime}</span>
           </div>
         )}
 
@@ -149,11 +150,11 @@ export const EventCard = ({ event, showDate = false, compact = false }: EventCar
           </div>
         )}
 
-        {/* メモ */}
-        {event.memo && (
+        {/* 説明 */}
+        {activity.description && (
           <div className="flex items-start text-sm text-gray-600">
             <FileText className="w-4 h-4 mr-2 mt-0.5" />
-            <p className="break-words">{event.memo}</p>
+            <p className="break-words">{activity.description}</p>
           </div>
         )}
       </div>
@@ -161,11 +162,13 @@ export const EventCard = ({ event, showDate = false, compact = false }: EventCar
       {/* タイプラベル */}
       <div className="mt-3 flex items-center justify-between">
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          event.type === 'task' 
+          activity.category === 'task' 
             ? 'bg-amber-100 text-amber-800' 
             : 'bg-blue-100 text-blue-800'
         }`}>
-          {event.type === 'task' ? 'タスク' : 'イベント'}
+          {activity.category === 'task' ? 'タスク' : 
+           activity.category === 'event' ? 'イベント' : 
+           activity.category}
         </span>
       </div>
     </div>

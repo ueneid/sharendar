@@ -22,7 +22,7 @@ export const DIProvider = ({ children }: DIProviderProps) => {
           await db.initialize();
           
           initialized.current = true;
-          console.log('DI Container and Database initialized');
+          console.log('DI Container and Database initialized for Activity domain');
         } catch (error) {
           console.error('Initialization failed:', error);
         }

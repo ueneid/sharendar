@@ -4,8 +4,7 @@
 
 // ストア
 export { useFamilyMemberStore } from './family-store';
-export { useCalendarStore } from './calendar-store';
-export { useTaskStore } from './tasks-store';
+export { useActivityStore } from './activity-store';
 
 // セレクター
 export {
@@ -15,26 +14,7 @@ export {
   useFamilyMemberAsync,
 } from './family-store';
 
-export {
-  useCalendarEvents,
-  useFilteredEvents,
-  useSelectedDate,
-  useCalendarView,
-  useCalendarFilter,
-  useEventForm,
-  useCalendarAsync,
-} from './calendar-store';
-
-export {
-  useTasks,
-  useFilteredTasks,
-  useSelectedTask,
-  useTaskFilter,
-  useTaskForm,
-  useTaskAsync,
-  useOverdueTasks,
-  useTasksByMember,
-} from './tasks-store';
+// Legacy stores removed - migrated to ActivityStore
 
 // 型定義
 export type {
@@ -58,6 +38,5 @@ export {
 export {
   getUseCases,
   getFamilyMemberUseCase,
-  getCalendarEventUseCase,
-  getTaskUseCase,
+  getActivityUseCase,
 } from './container';

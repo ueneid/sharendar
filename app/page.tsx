@@ -5,47 +5,56 @@ import { Calendar, CheckSquare, Upload, Users, Plus, Clock, AlertCircle } from '
 import Link from 'next/link';
 import { format, isToday, isTomorrow, addDays } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { useCalendarStore, useCalendarEvents } from '@/lib/store/calendar-store';
-import { useTaskStore, useTasks, useOverdueTasks } from '@/lib/store/tasks-store';
+import { useActivityStore } from '@/lib/store/activity-store';
 import { useFamilyMemberStore, useFamilyMembers } from '@/lib/store';
-import { TaskCard } from './tasks/components/TaskCard';
-import { EventCard } from './calendar/components/EventCard';
 import type { DateString } from '@/domain/shared/branded-types';
 
 export default function HomePage() {
-  const { loadEvents, getEventsByDate } = useCalendarStore();
-  const { loadTasks } = useTaskStore();
+  const { loadAllActivities, activities } = useActivityStore();
   const { loadMembers } = useFamilyMemberStore();
-  
-  const calendarEvents = useCalendarEvents();
-  const tasks = useTasks();
-  const overdueTasks = useOverdueTasks();
   const familyMembers = useFamilyMembers();
 
   // 初期データロード
   useEffect(() => {
     loadMembers();
-    loadEvents();
-    loadTasks();
-  }, [loadMembers, loadEvents, loadTasks]);
+    loadAllActivities();
+  }, [loadMembers, loadAllActivities]);
 
   // 今日・明日・明後日のデータ
   const today = new Date().toISOString().split('T')[0] as DateString;
   const tomorrow = addDays(new Date(), 1).toISOString().split('T')[0] as DateString;
   const dayAfterTomorrow = addDays(new Date(), 2).toISOString().split('T')[0] as DateString;
 
-  const todayEvents = getEventsByDate(today);
-  const tomorrowEvents = getEventsByDate(tomorrow);
-  const todayTasks = tasks.filter(task => 
-    task.dueDate === today && task.status === 'pending'
-  );
-  const tomorrowTasks = tasks.filter(task => 
-    task.dueDate === tomorrow && task.status === 'pending'
+  // Activityからイベントとタスクを分離
+  const eventActivities = activities.filter(activity => activity.category === 'event');
+  const taskActivities = activities.filter(activity => 
+    activity.category === 'task' || activity.category === 'deadline'
   );
 
-  // 今週の統計
-  const completedTasksCount = tasks.filter(task => task.status === 'completed').length;
-  const pendingTasksCount = tasks.filter(task => task.status === 'pending').length;
+  // 今日のデータ
+  const todayEvents = eventActivities.filter(activity =>
+    activity.startDate === today || activity.dueDate === today
+  );
+  const todayTasks = taskActivities.filter(activity => 
+    activity.dueDate === today && activity.status === 'pending'
+  );
+
+  // 明日のデータ
+  const tomorrowEvents = eventActivities.filter(activity =>
+    activity.startDate === tomorrow || activity.dueDate === tomorrow
+  );
+  const tomorrowTasks = taskActivities.filter(activity => 
+    activity.dueDate === tomorrow && activity.status === 'pending'
+  );
+
+  // 期限切れタスク
+  const overdueTasks = taskActivities.filter(activity => 
+    activity.dueDate && activity.dueDate < today && activity.status === 'pending'
+  );
+
+  // 統計
+  const completedTasksCount = taskActivities.filter(activity => activity.status === 'completed').length;
+  const pendingTasksCount = taskActivities.filter(activity => activity.status === 'pending').length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -169,8 +178,16 @@ export default function HomePage() {
             <div className="p-4">
               {todayEvents.length > 0 ? (
                 <div className="space-y-3">
-                  {todayEvents.map((event) => (
-                    <EventCard key={event.id} event={event} compact />
+                  {todayEvents.map((activity) => (
+                    <div key={activity.id} className="p-3 border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-900">{activity.title}</h4>
+                      {activity.startTime && (
+                        <p className="text-sm text-gray-600">{activity.startTime}</p>
+                      )}
+                      {activity.description && (
+                        <p className="text-sm text-gray-500 mt-1">{activity.description}</p>
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -200,8 +217,28 @@ export default function HomePage() {
             <div className="p-4">
               {todayTasks.length > 0 ? (
                 <div className="space-y-3">
-                  {todayTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} compact />
+                  {todayTasks.map((activity) => (
+                    <div key={activity.id} className="p-3 border border-gray-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-gray-900">{activity.title}</h4>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          activity.priority === 'high' ? 'bg-red-100 text-red-700' :
+                          activity.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {activity.priority === 'high' ? '高' : 
+                           activity.priority === 'medium' ? '中' : '低'}
+                        </span>
+                      </div>
+                      {activity.description && (
+                        <p className="text-sm text-gray-500 mt-1">{activity.description}</p>
+                      )}
+                      {activity.checklist.length > 0 && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          チェックリスト: {activity.checklist.filter(item => item.checked).length}/{activity.checklist.length}
+                        </p>
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -239,8 +276,13 @@ export default function HomePage() {
                       イベント ({tomorrowEvents.length})
                     </h3>
                     <div className="space-y-2">
-                      {tomorrowEvents.map((event) => (
-                        <EventCard key={event.id} event={event} compact />
+                      {tomorrowEvents.map((activity) => (
+                        <div key={activity.id} className="p-2 border border-gray-200 rounded">
+                          <h5 className="font-medium text-sm text-gray-900">{activity.title}</h5>
+                          {activity.startTime && (
+                            <p className="text-xs text-gray-600">{activity.startTime}</p>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -253,8 +295,20 @@ export default function HomePage() {
                       タスク ({tomorrowTasks.length})
                     </h3>
                     <div className="space-y-2">
-                      {tomorrowTasks.map((task) => (
-                        <TaskCard key={task.id} task={task} compact />
+                      {tomorrowTasks.map((activity) => (
+                        <div key={activity.id} className="p-2 border border-gray-200 rounded">
+                          <h5 className="font-medium text-sm text-gray-900">{activity.title}</h5>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className={`text-xs px-1 py-0.5 rounded ${
+                              activity.priority === 'high' ? 'bg-red-100 text-red-700' :
+                              activity.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {activity.priority === 'high' ? '高' : 
+                               activity.priority === 'medium' ? '中' : '低'}
+                            </span>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>

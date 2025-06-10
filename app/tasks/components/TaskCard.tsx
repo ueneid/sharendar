@@ -2,52 +2,58 @@
 
 import React from 'react';
 import { Clock, Users, FileText, Edit2, Trash2, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
-import type { Task } from '@/domain/tasks/types';
+import type { Activity } from '@/domain/activity/types';
 import { useFamilyMembers } from '@/lib/store';
-import { useTaskStore } from '@/lib/store/tasks-store';
 import { format, isPast } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
 interface TaskCardProps {
-  task: Task;
+  activity: Activity;
   compact?: boolean;
   showDate?: boolean;
 }
 
-export const TaskCard = ({ task, compact = false, showDate = false }: TaskCardProps) => {
-  const { openTaskForm, deleteTask, completeTask, reopenTask, selectTask, getTaskProgress } = useTaskStore();
+export const TaskCard = ({ activity, compact = false, showDate = false }: TaskCardProps) => {
   const familyMembers = useFamilyMembers();
 
-  const assignedMembers = task.memberIds
+  const assignedMembers = activity.memberIds
     .map(id => familyMembers.find(member => member.id === id))
     .filter((member): member is NonNullable<typeof member> => member !== undefined);
 
-  const progress = getTaskProgress(task.id);
-  const isOverdue = task.dueDate && isPast(new Date(task.dueDate)) && task.status === 'pending';
+  // チェックリストの進捗計算
+  const progress = React.useMemo(() => {
+    const total = activity.checklist.length;
+    const completed = activity.checklist.filter(item => item.checked).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { total, completed, percentage };
+  }, [activity.checklist]);
+  
+  const isOverdue = activity.dueDate && isPast(new Date(activity.dueDate)) && activity.status !== 'completed';
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openTaskForm(task);
+    // TODO: 統一Activityフォームでの編集
+    console.log('タスク編集:', activity.title);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm(`「${task.title}」を削除しますか？`)) {
-      await deleteTask(task.id);
+    if (window.confirm(`「${activity.title}」を削除しますか？`)) {
+      // TODO: ActivityStoreでの削除
+      console.log('タスク削除:', activity.title);
     }
   };
 
   const handleToggleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (task.status === 'completed') {
-      await reopenTask(task.id);
-    } else {
-      await completeTask(task.id);
-    }
+    // TODO: ActivityStoreでのステータス更新
+    const newStatus = activity.status === 'completed' ? 'pending' : 'completed';
+    console.log('ステータス変更:', activity.title, newStatus);
   };
 
   const handleClick = () => {
-    selectTask(task.id);
+    // TODO: Activity詳細表示
+    console.log('タスク選択:', activity.title);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -68,9 +74,9 @@ export const TaskCard = ({ task, compact = false, showDate = false }: TaskCardPr
     }
   };
 
-  const statusStyle = task.status === 'completed' 
+  const statusStyle = activity.status === 'completed' 
     ? 'opacity-60 bg-gray-100 border-l-gray-300' 
-    : getPriorityColor(task.priority);
+    : getPriorityColor(activity.priority);
 
   if (compact) {
     return (
@@ -83,9 +89,9 @@ export const TaskCard = ({ task, compact = false, showDate = false }: TaskCardPr
             <button
               onClick={handleToggleComplete}
               className="mr-3 flex-shrink-0"
-              aria-label={task.status === 'completed' ? '未完了に戻す' : '完了にする'}
+              aria-label={activity.status === 'completed' ? '未完了に戻す' : '完了にする'}
             >
-              {task.status === 'completed' ? (
+              {activity.status === 'completed' ? (
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
               ) : (
                 <Circle className="w-5 h-5 text-gray-400" />
@@ -94,19 +100,19 @@ export const TaskCard = ({ task, compact = false, showDate = false }: TaskCardPr
             
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-medium truncate ${
-                task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'
+                activity.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'
               }`}>
-                {task.title}
+                {activity.title}
               </p>
               
               <div className="flex items-center space-x-2 mt-1">
-                {task.dueDate && (
+                {activity.dueDate && (
                   <div className={`flex items-center text-xs ${
                     isOverdue ? 'text-red-600' : 'text-gray-500'
                   }`}>
                     {isOverdue && <AlertCircle className="w-3 h-3 mr-1" />}
                     <Clock className="w-3 h-3 mr-1" />
-                    {format(new Date(task.dueDate), 'M/d', { locale: ja })}
+                    {format(new Date(activity.dueDate), 'M/d', { locale: ja })}
                   </div>
                 )}
                 
@@ -154,9 +160,9 @@ export const TaskCard = ({ task, compact = false, showDate = false }: TaskCardPr
           <button
             onClick={handleToggleComplete}
             className="mt-0.5 flex-shrink-0"
-            aria-label={task.status === 'completed' ? '未完了に戻す' : '完了にする'}
+            aria-label={activity.status === 'completed' ? '未完了に戻す' : '完了にする'}
           >
-            {task.status === 'completed' ? (
+            {activity.status === 'completed' ? (
               <CheckCircle2 className="w-6 h-6 text-green-600" />
             ) : (
               <Circle className="w-6 h-6 text-gray-400" />
@@ -165,14 +171,14 @@ export const TaskCard = ({ task, compact = false, showDate = false }: TaskCardPr
           
           <div className="flex-1">
             <h3 className={`font-medium ${
-              task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'
+              activity.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'
             }`}>
-              {task.title}
+              {activity.title}
             </h3>
             
-            {showDate && task.createdAt && (
+            {showDate && activity.createdAt && (
               <p className="text-sm text-gray-600 mt-1">
-                作成日: {format(new Date(task.createdAt), 'M月d日', { locale: ja })}
+                作成日: {format(new Date(activity.createdAt), 'M月d日', { locale: ja })}
               </p>
             )}
           </div>
@@ -199,14 +205,14 @@ export const TaskCard = ({ task, compact = false, showDate = false }: TaskCardPr
       {/* 詳細情報 */}
       <div className="space-y-2">
         {/* 期限 */}
-        {task.dueDate && (
+        {activity.dueDate && (
           <div className={`flex items-center text-sm ${
             isOverdue ? 'text-red-600' : 'text-gray-600'
           }`}>
             {isOverdue && <AlertCircle className="w-4 h-4 mr-2" />}
             <Clock className="w-4 h-4 mr-2" />
             <span>
-              期限: {format(new Date(task.dueDate), 'M月d日(E)', { locale: ja })}
+              期限: {format(new Date(activity.dueDate), 'M月d日(E)', { locale: ja })}
               {isOverdue && ' (期限切れ)'}
             </span>
           </div>
@@ -248,11 +254,11 @@ export const TaskCard = ({ task, compact = false, showDate = false }: TaskCardPr
           </div>
         )}
 
-        {/* メモ */}
-        {task.memo && (
+        {/* 説明 */}
+        {activity.description && (
           <div className="flex items-start text-sm text-gray-600">
             <FileText className="w-4 h-4 mr-2 mt-0.5" />
-            <p className="break-words">{task.memo}</p>
+            <p className="break-words">{activity.description}</p>
           </div>
         )}
       </div>
@@ -260,16 +266,16 @@ export const TaskCard = ({ task, compact = false, showDate = false }: TaskCardPr
       {/* フッター */}
       <div className="mt-3 flex items-center justify-between">
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          getPriorityBadge(task.priority)
+          getPriorityBadge(activity.priority)
         }`}>
-          {task.priority === 'high' && '高優先度'}
-          {task.priority === 'medium' && '中優先度'}
-          {task.priority === 'low' && '低優先度'}
+          {activity.priority === 'high' && '高優先度'}
+          {activity.priority === 'medium' && '中優先度'}
+          {activity.priority === 'low' && '低優先度'}
         </span>
         
-        {task.status === 'completed' && task.completedAt && (
+        {activity.status === 'completed' && activity.completedAt && (
           <span className="text-xs text-gray-500">
-            完了: {format(new Date(task.completedAt), 'M/d', { locale: ja })}
+            完了: {format(new Date(activity.completedAt), 'M/d', { locale: ja })}
           </span>
         )}
       </div>

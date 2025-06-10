@@ -14,14 +14,16 @@ import {
 } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { useCalendarStore, useFilteredEvents, useSelectedDate } from '@/lib/store/calendar-store';
-import { asDateString } from '@/domain/shared/branded-types';
+import type { Activity } from '@/domain/activity/types';
 import { EventCard } from './EventCard';
 
-export const MonthView = () => {
-  const { openEventForm, setSelectedDate } = useCalendarStore();
-  const events = useFilteredEvents();
-  const selectedDate = useSelectedDate();
+interface MonthViewProps {
+  activities: Activity[];
+  selectedDate: string | null;
+  onDateSelect: (date: string | null) => void;
+}
+
+export const MonthView = ({ activities, selectedDate, onDateSelect }: MonthViewProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // 月の日付を生成
@@ -31,20 +33,26 @@ export const MonthView = () => {
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 
-  // 日付ごとのイベントをグループ化
-  const eventsByDate = useMemo(() => {
-    const grouped = new Map<string, typeof events>();
+  // 日付ごとのアクティビティをグループ化
+  const activitiesByDate = useMemo(() => {
+    const grouped = new Map<string, Activity[]>();
     
-    events.forEach(event => {
-      const dateKey = event.date;
-      if (!grouped.has(dateKey)) {
-        grouped.set(dateKey, []);
+    activities.forEach(activity => {
+      // イベントの場合はstartDate、タスクの場合はdueDateを使用
+      const dateKey = activity.category === 'event' 
+        ? activity.startDate 
+        : activity.dueDate;
+      
+      if (dateKey) {
+        if (!grouped.has(dateKey)) {
+          grouped.set(dateKey, []);
+        }
+        grouped.get(dateKey)!.push(activity);
       }
-      grouped.get(dateKey)!.push(event);
     });
     
     return grouped;
-  }, [events]);
+  }, [activities]);
 
   const handlePreviousMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
@@ -55,14 +63,14 @@ export const MonthView = () => {
   };
 
   const handleDateClick = (date: Date) => {
-    const dateString = asDateString(format(date, 'yyyy-MM-dd'));
-    setSelectedDate(dateString);
+    const dateString = format(date, 'yyyy-MM-dd');
+    onDateSelect(dateString);
   };
 
   const handleAddEvent = (date: Date) => {
-    const dateString = asDateString(format(date, 'yyyy-MM-dd'));
-    setSelectedDate(dateString);
-    openEventForm();
+    const dateString = format(date, 'yyyy-MM-dd');
+    onDateSelect(dateString);
+    // TODO: 統一Activityフォームの実装
   };
 
   const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
@@ -108,7 +116,7 @@ export const MonthView = () => {
       <div className="grid grid-cols-7">
         {monthDays.map((day, index) => {
           const dateString = format(day, 'yyyy-MM-dd');
-          const dayEvents = eventsByDate.get(dateString) || [];
+          const dayActivities = activitiesByDate.get(dateString) || [];
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isSelected = selectedDate && isSameDay(day, new Date(selectedDate));
           const isCurrentDay = isToday(day);
@@ -149,21 +157,21 @@ export const MonthView = () => {
                 )}
               </div>
 
-              {/* イベントリスト */}
+              {/* アクティビティリスト */}
               <div className="space-y-1 overflow-y-auto max-h-[80px]">
-                {dayEvents.slice(0, 3).map((event) => (
+                {dayActivities.slice(0, 3).map((activity) => (
                   <EventCard
-                    key={event.id}
-                    event={event}
+                    key={activity.id}
+                    activity={activity}
                     compact
                   />
                 ))}
-                {dayEvents.length > 3 && (
+                {dayActivities.length > 3 && (
                   <button
                     onClick={() => handleDateClick(day)}
                     className="text-xs text-blue-600 hover:text-blue-800 pl-2"
                   >
-                    他 {dayEvents.length - 3} 件
+                    他 {dayActivities.length - 3} 件
                   </button>
                 )}
               </div>

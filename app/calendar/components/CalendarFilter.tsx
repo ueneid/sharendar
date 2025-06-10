@@ -1,24 +1,22 @@
 'use client';
 
 import { Filter, Users, CheckSquare, Calendar } from 'lucide-react';
-import { useCalendarStore, useCalendarFilter } from '@/lib/store/calendar-store';
 import { useFamilyMembers } from '@/lib/store';
 
 export const CalendarFilter = () => {
-  const { setFilter } = useCalendarStore();
-  const filter = useCalendarFilter();
   const familyMembers = useFamilyMembers();
+  
+  // TODO: 統一ActivityStoreでのフィルター機能実装
+  const filter = { memberIds: [], showCompleted: true };
 
   const handleMemberToggle = (memberId: string) => {
-    const newMemberIds = filter.memberIds.includes(memberId)
-      ? filter.memberIds.filter(id => id !== memberId)
-      : [...filter.memberIds, memberId];
-    
-    setFilter({ memberIds: newMemberIds });
+    // TODO: ActivityStoreでのフィルター更新
+    console.log('メンバーフィルター切り替え:', memberId);
   };
 
   const handleClearFilter = () => {
-    setFilter({ memberIds: [], showCompleted: true });
+    // TODO: ActivityStoreでのフィルタークリア
+    console.log('フィルタークリア');
   };
 
   const hasActiveFilters = filter.memberIds.length > 0 || !filter.showCompleted;
@@ -86,7 +84,7 @@ export const CalendarFilter = () => {
             <input
               type="checkbox"
               checked={filter.showCompleted}
-              onChange={(e) => setFilter({ showCompleted: e.target.checked })}
+              onChange={(e) => console.log('完了済み表示切り替え:', e.target.checked)}
               className="mr-3"
             />
             <span className="text-sm">完了済みタスクを表示</span>
