@@ -9,7 +9,7 @@ import type { CalendarEvent } from '@/domain/calendar/types';
 import type { DateString, MemberId } from '@/domain/shared/branded-types';
 import { asDateString } from '@/domain/shared/branded-types';
 import { getCalendarEventUseCase } from './container';
-import { createAsyncActions, createInitialAsyncState } from './helpers';
+import { createAsyncActions, createInitialAsyncState, normalizeError } from './helpers';
 import type { AsyncState, BaseStore } from './types';
 
 // ビューモード
@@ -78,7 +78,7 @@ interface CalendarState extends AsyncState, BaseStore {
   // 非同期操作
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  handleAsyncOperation: <R>(
+  execute: <R>(
     operation: () => Promise<R>,
     onSuccess?: (result: R) => void,
     onError?: (error: string) => void
@@ -89,7 +89,7 @@ interface CalendarState extends AsyncState, BaseStore {
 export const useCalendarStore = create<CalendarState>()(
   devtools(
     (set, get) => {
-      const asyncActions = createAsyncActions(set, get);
+      const asyncActions = createAsyncActions(set);
       
       return {
         // 初期状態
@@ -107,43 +107,33 @@ export const useCalendarStore = create<CalendarState>()(
         
         // データ操作
         loadEvents: async () => {
-          await asyncActions.handleAsyncOperation(
-            async () => {
-              const useCase = getCalendarEventUseCase();
-              const result = await useCase.getAllEvents();
-              
-              if (result.isErr()) {
-                throw new Error(result.error.message);
-              }
-              
-              return result.value;
-            },
-            (events) => {
-              set({ events });
+          await asyncActions.execute(async () => {
+            const useCase = getCalendarEventUseCase();
+            const result = await useCase.getAllEvents();
+            
+            if (result.isErr()) {
+              throw new Error(result.error.message);
             }
-          );
+            
+            set({ events: result.value });
+          });
         },
         
         loadEventsByMonth: async (yearMonth: string) => {
-          await asyncActions.handleAsyncOperation(
-            async () => {
-              const useCase = getCalendarEventUseCase();
-              const result = await useCase.getEventsByMonth(yearMonth);
-              
-              if (result.isErr()) {
-                throw new Error(result.error.message);
-              }
-              
-              return result.value;
-            },
-            (events) => {
-              set({ events });
+          await asyncActions.execute(async () => {
+            const useCase = getCalendarEventUseCase();
+            const result = await useCase.getEventsByMonth(yearMonth);
+            
+            if (result.isErr()) {
+              throw new Error(result.error.message);
             }
-          );
+            
+            set({ events: result.value });
+          });
         },
         
         loadEventsByDateRange: async (startDate: string, endDate: string) => {
-          await asyncActions.handleAsyncOperation(
+          await asyncActions.execute(
             async () => {
               const useCase = getCalendarEventUseCase();
               const result = await useCase.getEventsByDateRange(startDate, endDate);
@@ -152,16 +142,12 @@ export const useCalendarStore = create<CalendarState>()(
                 throw new Error(result.error.message);
               }
               
-              return result.value;
-            },
-            (events) => {
-              set({ events });
-            }
-          );
+              set({ events: result.value });
+          });
         },
         
         createEvent: async (title, date, options = {}) => {
-          await asyncActions.handleAsyncOperation(
+          await asyncActions.execute(
             async () => {
               const useCase = getCalendarEventUseCase();
               const result = await useCase.createEvent(title, date, options);
@@ -170,16 +156,12 @@ export const useCalendarStore = create<CalendarState>()(
                 throw new Error(result.error.message);
               }
               
-              return result.value;
-            },
-            (newEvent) => {
               set(state => ({
-                events: [...state.events, newEvent],
-                isEventFormOpen: false,
-                editingEvent: null,
-              }));
-            }
-          );
+              events: [...state.events, result.value],
+              isEventFormOpen: false,
+              editingEvent: null,
+            }));
+          });
         },
         
         updateEvent: async (id, updates) => {
@@ -193,7 +175,7 @@ export const useCalendarStore = create<CalendarState>()(
             ),
           });
           
-          await asyncActions.handleAsyncOperation(
+          await get().execute(
             async () => {
               const useCase = getCalendarEventUseCase();
               const result = await useCase.updateEvent(id, updates);
@@ -229,7 +211,7 @@ export const useCalendarStore = create<CalendarState>()(
             selectedEventId: state.selectedEventId === id ? null : state.selectedEventId,
           }));
           
-          await asyncActions.handleAsyncOperation(
+          await get().execute(
             async () => {
               const useCase = getCalendarEventUseCase();
               const result = await useCase.deleteEvent(id);
@@ -336,9 +318,30 @@ export const useCalendarStore = create<CalendarState>()(
         },
         
         // 非同期アクション
-        setLoading: asyncActions.setLoading,
-        setError: asyncActions.setError,
-        handleAsyncOperation: asyncActions.handleAsyncOperation,
+        setLoading: (loading: boolean) => set({ loading }),
+        setError: (error: string | null) => set({ error }),
+        execute: async <R,>(
+          operation: () => Promise<R>,
+          onSuccess?: (result: R) => void,
+          onError?: (error: string) => void
+        ) => {
+          try {
+            set({ loading: true, error: null });
+            const result = await operation();
+            if (onSuccess) {
+              onSuccess(result);
+            }
+          } catch (error) {
+            const errorMessage = normalizeError(error);
+            set({ error: errorMessage });
+            if (onError) {
+              onError(errorMessage);
+            }
+            throw error;
+          } finally {
+            set({ loading: false });
+          }
+        },
       };
     },
     {

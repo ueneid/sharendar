@@ -41,7 +41,7 @@ interface FamilyMemberState extends AsyncState, BaseStore {
   // 非同期操作
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  handleAsyncOperation: <R>(
+  execute: <R>(
     operation: () => Promise<R>,
     onSuccess?: (result: R) => void,
     onError?: (error: string) => void
@@ -52,7 +52,7 @@ interface FamilyMemberState extends AsyncState, BaseStore {
 export const useFamilyMemberStore = create<FamilyMemberState>()(
   devtools(
     (set, get) => {
-      const asyncActions = createAsyncActions(set, get);
+      const asyncActions = createAsyncActions(set);
       
       return {
         // 初期状態
@@ -64,43 +64,33 @@ export const useFamilyMemberStore = create<FamilyMemberState>()(
         
         // データ操作
         loadMembers: async () => {
-          await asyncActions.handleAsyncOperation(
-            async () => {
-              const useCase = getFamilyMemberUseCase();
-              const result = await useCase.getAllMembers();
-              
-              if (result.isErr()) {
-                throw new Error(result.error.message);
-              }
-              
-              return result.value;
-            },
-            (members) => {
-              set({ members });
+          await asyncActions.execute(async () => {
+            const useCase = getFamilyMemberUseCase();
+            const result = await useCase.getAllMembers();
+            
+            if (result.isErr()) {
+              throw new Error(result.error.message);
             }
-          );
+            
+            set({ members: result.value });
+          });
         },
         
         createMember: async (name: string, options = {}) => {
-          await asyncActions.handleAsyncOperation(
-            async () => {
-              const useCase = getFamilyMemberUseCase();
-              const result = await useCase.createMember(name, options);
-              
-              if (result.isErr()) {
-                throw new Error(result.error.message);
-              }
-              
-              return result.value;
-            },
-            (newMember) => {
-              set(state => ({
-                members: [...state.members, newMember],
-                isFormOpen: false,
-                editingMember: null,
-              }));
+          await asyncActions.execute(async () => {
+            const useCase = getFamilyMemberUseCase();
+            const result = await useCase.createMember(name, options);
+            
+            if (result.isErr()) {
+              throw new Error(result.error.message);
             }
-          );
+            
+            set(state => ({
+              members: [...state.members, result.value],
+              isFormOpen: false,
+              editingMember: null,
+            }));
+          });
         },
         
         updateMember: async (id: string, updates) => {
@@ -114,7 +104,7 @@ export const useFamilyMemberStore = create<FamilyMemberState>()(
             ),
           });
           
-          await asyncActions.handleAsyncOperation(
+          await get().execute(
             async () => {
               const useCase = getFamilyMemberUseCase();
               const result = await useCase.updateMember(id, updates);
@@ -136,7 +126,7 @@ export const useFamilyMemberStore = create<FamilyMemberState>()(
             },
             () => {
               // エラー時は元に戻す
-              set({ members: originalMembers });
+              set({ members: currentMembers });
             }
           );
         },
@@ -151,7 +141,7 @@ export const useFamilyMemberStore = create<FamilyMemberState>()(
             selectedMemberId: currentState.selectedMemberId === id ? null : currentState.selectedMemberId,
           });
           
-          await asyncActions.handleAsyncOperation(
+          await get().execute(
             async () => {
               const useCase = getFamilyMemberUseCase();
               const result = await useCase.deleteMember(id);
@@ -223,9 +213,30 @@ export const useFamilyMemberStore = create<FamilyMemberState>()(
         },
         
         // 非同期アクション（明示的に展開）
-        setLoading: asyncActions.setLoading,
-        setError: asyncActions.setError,
-        handleAsyncOperation: asyncActions.handleAsyncOperation,
+        setLoading: (loading: boolean) => set({ loading }),
+        setError: (error: string | null) => set({ error }),
+        execute: async <R,>(
+          operation: () => Promise<R>,
+          onSuccess?: (result: R) => void,
+          onError?: (error: string) => void
+        ) => {
+          try {
+            set({ loading: true, error: null });
+            const result = await operation();
+            if (onSuccess) {
+              onSuccess(result);
+            }
+          } catch (error) {
+            const errorMessage = normalizeError(error);
+            set({ error: errorMessage });
+            if (onError) {
+              onError(errorMessage);
+            }
+            throw error;
+          } finally {
+            set({ loading: false });
+          }
+        },
       };
     },
     {
