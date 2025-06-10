@@ -1,5 +1,6 @@
 /**
- * Tasks Zustandストア (簡略版)
+ * タスク管理ストア
+ * Application層のTaskUseCaseと統合
  */
 
 import { create } from 'zustand';
@@ -7,6 +8,9 @@ import { devtools } from 'zustand/middleware';
 import type { Task, TaskId, Priority } from '@/domain/tasks/types';
 import type { MemberId } from '@/domain/family/types';
 import type { DateString } from '@/domain/shared/branded-types';
+import { getTaskUseCase } from './container';
+import { createAsyncActions, createInitialAsyncState, normalizeError } from './helpers';
+import type { AsyncState, BaseStore } from './types';
 
 // ===== 状態の型定義 =====
 
@@ -25,7 +29,7 @@ interface TaskForm {
   editingTask: Task | null;
 }
 
-interface TaskState {
+interface TaskState extends AsyncState, BaseStore {
   // データ状態
   tasks: readonly Task[];
   selectedTaskId: TaskId | null;
@@ -33,8 +37,6 @@ interface TaskState {
   // UI状態
   filter: TaskFilter;
   form: TaskForm;
-  loading: boolean;
-  error: string | null;
   
   // 基本操作
   loadTasks: () => Promise<void>;
@@ -62,8 +64,16 @@ interface TaskState {
   closeTaskForm: () => void;
   
   // 状態管理
-  setError: (error: string | null) => void;
   reset: () => void;
+  
+  // 非同期操作
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  execute: <R>(
+    operation: () => Promise<R>,
+    onSuccess?: (result: R) => void,
+    onError?: (error: string) => void
+  ) => Promise<void>;
   
   // 計算プロパティ用のゲッター
   getFilteredTasks: () => readonly Task[];
@@ -91,83 +101,80 @@ const initialForm: TaskForm = {
 
 export const useTaskStore = create<TaskState>()(
   devtools(
-    (set, get) => ({
-      // 初期状態
-      tasks: [],
-      selectedTaskId: null,
-      filter: initialFilter,
-      form: initialForm,
-      loading: false,
-      error: null,
+    (set, get) => {
+      const asyncActions = createAsyncActions(set);
+      
+      return {
+        // 初期状態
+        ...createInitialAsyncState(),
+        tasks: [],
+        selectedTaskId: null,
+        filter: initialFilter,
+        form: initialForm,
 
-      // 基本操作 (モック実装)
-      loadTasks: async () => {
-        set({ loading: true, error: null });
-        try {
-          // TODO: Application層との統合
-          set({ tasks: [], loading: false });
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'エラーが発生しました', loading: false });
-        }
-      },
+        // 基本操作
+        loadTasks: async () => {
+          await asyncActions.execute(async () => {
+            const useCase = getTaskUseCase();
+            const result = await useCase.getAllTasks();
+            
+            if (result.isErr()) {
+              throw new Error(result.error.message);
+            }
+            
+            set({ tasks: result.value });
+          });
+        },
 
-      createTask: async (title, options = {}) => {
-        set({ loading: true, error: null });
-        try {
-          // TODO: Application層との統合
-          const newTask: Task = {
-            id: `task_${Date.now()}` as TaskId,
-            title: title as any,
-            dueDate: options.dueDate,
-            priority: options.priority || 'medium',
-            status: 'pending',
-            memberIds: (options.memberIds || []) as MemberId[],
-            checklist: (options.checklist || []).map(item => ({
-              id: `item_${Date.now()}`,
-              title: item.title,
-              checked: false,
-            })),
-            memo: options.memo,
-            createdAt: new Date().toISOString().split('T')[0] as DateString,
-          };
-          
-          set(state => ({ 
-            tasks: [newTask, ...state.tasks],
-            loading: false,
-            form: { isOpen: false, editingTask: null }
-          }));
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'エラーが発生しました', loading: false });
-        }
-      },
+        createTask: async (title, options = {}) => {
+          await asyncActions.execute(async () => {
+            const useCase = getTaskUseCase();
+            const result = await useCase.createTask(title, options);
+            
+            if (result.isErr()) {
+              throw new Error(result.error.message);
+            }
+            
+            set(state => ({ 
+              tasks: [...state.tasks, result.value],
+              form: { isOpen: false, editingTask: null }
+            }));
+          });
+        },
 
-      updateTask: async (id, updates) => {
-        set({ loading: true, error: null });
-        try {
-          set(state => ({
-            tasks: state.tasks.map(task => 
-              task.id === id ? { ...task, ...updates } : task
-            ),
-            loading: false,
-            form: { isOpen: false, editingTask: null }
-          }));
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'エラーが発生しました', loading: false });
-        }
-      },
+        updateTask: async (id, updates) => {
+          await asyncActions.execute(async () => {
+            const useCase = getTaskUseCase();
+            const result = await useCase.updateTask(id, updates);
+            
+            if (result.isErr()) {
+              throw new Error(result.error.message);
+            }
+            
+            set(state => ({
+              tasks: state.tasks.map(task => 
+                task.id === id ? result.value : task
+              ),
+              form: { isOpen: false, editingTask: null }
+            }));
+          });
+        },
 
-      deleteTask: async (id) => {
-        set({ loading: true, error: null });
-        try {
-          set(state => ({
-            tasks: state.tasks.filter(task => task.id !== id),
-            selectedTaskId: state.selectedTaskId === id ? null : state.selectedTaskId,
-            loading: false
-          }));
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'エラーが発生しました', loading: false });
-        }
-      },
+        deleteTask: async (id) => {
+          await asyncActions.execute(async () => {
+            const useCase = getTaskUseCase();
+            const result = await useCase.deleteTask(id);
+            
+            if (result.isErr()) {
+              throw new Error(result.error.message);
+            }
+            
+            set(state => ({
+              tasks: state.tasks.filter(task => task.id !== id),
+              selectedTaskId: state.selectedTaskId === id ? null : state.selectedTaskId
+            }));
+          });
+        },
 
       // タスク操作
       completeTask: async (id) => {
@@ -218,21 +225,6 @@ export const useTaskStore = create<TaskState>()(
         });
       },
 
-      // 状態管理
-      setError: (error) => {
-        set({ error });
-      },
-
-      reset: () => {
-        set({
-          tasks: [],
-          selectedTaskId: null,
-          filter: initialFilter,
-          form: initialForm,
-          loading: false,
-          error: null,
-        });
-      },
 
       // 計算プロパティ用のゲッター
       getFilteredTasks: () => {
@@ -302,7 +294,45 @@ export const useTaskStore = create<TaskState>()(
 
         return { completed, total, percentage };
       },
-    }),
+      
+      // 状態管理
+      reset: () => {
+        set({
+          ...createInitialAsyncState(),
+          tasks: [],
+          selectedTaskId: null,
+          filter: initialFilter,
+          form: initialForm,
+        });
+      },
+      
+      // 非同期操作
+      setLoading: (loading: boolean) => set({ loading }),
+      setError: (error: string | null) => set({ error }),
+      execute: async <R,>(
+        operation: () => Promise<R>,
+        onSuccess?: (result: R) => void,
+        onError?: (error: string) => void
+      ) => {
+        try {
+          set({ loading: true, error: null });
+          const result = await operation();
+          if (onSuccess) {
+            onSuccess(result);
+          }
+        } catch (error) {
+          const errorMessage = normalizeError(error);
+          set({ error: errorMessage });
+          if (onError) {
+            onError(errorMessage);
+          }
+          throw error;
+        } finally {
+          set({ loading: false });
+        }
+      },
+    };
+    },
     { name: 'task-store' }
   )
 );
