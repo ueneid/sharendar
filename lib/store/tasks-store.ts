@@ -8,9 +8,25 @@ import { devtools } from 'zustand/middleware';
 import type { Task, TaskId, Priority } from '@/domain/tasks/types';
 import type { MemberId } from '@/domain/family/types';
 import type { DateString } from '@/domain/shared/branded-types';
-import { getTaskUseCase } from './container';
+import { getTaskUseCase, getCalendarEventUseCase } from './container';
 import { createAsyncActions, createInitialAsyncState, normalizeError } from './helpers';
 import type { AsyncState, BaseStore } from './types';
+import type { CalendarEvent } from '@/domain/calendar/types';
+import { asTaskId, asTaskTitle, asDateString } from '@/domain/shared/branded-types';
+
+// ===== CalendarEventからTaskへの変換 =====
+
+const convertCalendarEventToTask = (event: CalendarEvent): Task => ({
+  id: asTaskId(`calendar_${event.id}`), // プレフィックス付きで重複を避ける
+  title: asTaskTitle(event.title),
+  dueDate: event.date,
+  priority: 'medium' as Priority, // デフォルト優先度
+  status: 'pending' as const,
+  memberIds: event.memberIds,
+  checklist: [], // CalendarEventにはchecklistがないので空配列
+  createdAt: event.date, // 作成日として日付を使用
+  memo: event.memo,
+});
 
 // ===== 状態の型定義 =====
 
@@ -115,14 +131,31 @@ export const useTaskStore = create<TaskState>()(
         // 基本操作
         loadTasks: async () => {
           await asyncActions.execute(async () => {
-            const useCase = getTaskUseCase();
-            const result = await useCase.getAllTasks();
+            // 1. 専用のTasksを取得
+            const taskUseCase = getTaskUseCase();
+            const taskResult = await taskUseCase.getAllTasks();
             
-            if (result.isErr()) {
-              throw new Error(result.error.message);
+            if (taskResult.isErr()) {
+              throw new Error(taskResult.error.message);
             }
             
-            set({ tasks: result.value });
+            // 2. カレンダーからタスクタイプのイベントを取得
+            const calendarUseCase = getCalendarEventUseCase();
+            const eventResult = await calendarUseCase.getAllEvents();
+            
+            if (eventResult.isErr()) {
+              throw new Error(eventResult.error.message);
+            }
+            
+            // 3. CalendarEventのtask型をTaskに変換
+            const calendarTasks = eventResult.value
+              .filter(event => event.type === 'task')
+              .map(convertCalendarEventToTask);
+            
+            // 4. 両方を統合
+            const allTasks = [...taskResult.value, ...calendarTasks];
+            
+            set({ tasks: allTasks });
           });
         },
 

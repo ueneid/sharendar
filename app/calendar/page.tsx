@@ -6,27 +6,53 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { useCalendarStore, useCalendarAsync, useSelectedDate } from '@/lib/store/calendar-store';
 import { useFamilyMemberStore } from '@/lib/store';
+import { useTaskStore, useTasks } from '@/lib/store/tasks-store';
+import type { CalendarEvent } from '@/domain/calendar/types';
+import { asEventId, asEventTitle } from '@/domain/shared/branded-types';
 import { MonthView } from './components/MonthView';
 import { CalendarFilter } from './components/CalendarFilter';
 import { EventForm } from './components/EventForm';
 import { EventCard } from './components/EventCard';
 import { asDateString } from '@/domain/shared/branded-types';
 
+// TaskからCalendarEventへの変換
+const convertTaskToCalendarEvent = (task: any): CalendarEvent => ({
+  id: asEventId(task.id.replace('calendar_', '')), // プレフィックスを除去
+  title: asEventTitle(task.title),
+  date: task.dueDate || task.createdAt,
+  memberIds: task.memberIds,
+  type: 'task' as const,
+  memo: task.memo,
+});
+
 export default function CalendarPage() {
   const { loadEvents, openEventForm, getEventsByDate } = useCalendarStore();
+  const { loadTasks } = useTaskStore();
   const { loadMembers } = useFamilyMemberStore();
   const { loading, error } = useCalendarAsync();
   const selectedDate = useSelectedDate();
+  const tasks = useTasks();
   
   // 初期データロード
   useEffect(() => {
     loadMembers();
     loadEvents();
-  }, [loadMembers, loadEvents]);
+    loadTasks(); // タスクもロード
+  }, [loadMembers, loadEvents, loadTasks]);
 
+  // カレンダーイベントとタスクを統合
   const selectedDateEvents = selectedDate 
     ? getEventsByDate(selectedDate) 
     : [];
+    
+  const selectedDateTasks = selectedDate
+    ? tasks
+        .filter(task => !task.id.startsWith('calendar_')) // カレンダーから変換されたタスクは除外
+        .filter(task => task.dueDate === selectedDate || task.createdAt === selectedDate)
+        .map(convertTaskToCalendarEvent)
+    : [];
+    
+  const allSelectedDateItems = [...selectedDateEvents, ...selectedDateTasks];
 
   const handleAddEvent = () => {
     openEventForm();
@@ -74,9 +100,9 @@ export default function CalendarPage() {
                 <h3 className="font-medium text-gray-900 mb-3">
                   {format(new Date(selectedDate), 'M月d日のイベント', { locale: ja })}
                 </h3>
-                {selectedDateEvents.length > 0 ? (
+                {allSelectedDateItems.length > 0 ? (
                   <div className="space-y-2">
-                    {selectedDateEvents.map((event) => (
+                    {allSelectedDateItems.map((event) => (
                       <EventCard key={event.id} event={event} />
                     ))}
                   </div>
@@ -123,9 +149,9 @@ export default function CalendarPage() {
               <h3 className="font-medium text-gray-900 mb-3">
                 {format(new Date(selectedDate), 'M月d日のイベント', { locale: ja })}
               </h3>
-              {selectedDateEvents.length > 0 ? (
+              {allSelectedDateItems.length > 0 ? (
                 <div className="space-y-2">
-                  {selectedDateEvents.map((event) => (
+                  {allSelectedDateItems.map((event) => (
                     <EventCard key={event.id} event={event} />
                   ))}
                 </div>
