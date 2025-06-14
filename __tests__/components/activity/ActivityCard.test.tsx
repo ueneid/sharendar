@@ -284,8 +284,8 @@ describe('ActivityCard', () => {
       const eventActivity = {
         ...testActivity,
         category: 'event' as const,
-        startTime: '10:00',
-        endTime: '12:00'
+        startTime: '10:00' as any,
+        endTime: '12:00' as any
       };
       
       render(<ActivityCard activity={eventActivity} />);
@@ -350,7 +350,7 @@ describe('ActivityCard', () => {
     });
 
     it('should display error message when present', () => {
-      mockUseActivityStore.error = 'テストエラー';
+      (mockUseActivityStore as any).error = 'テストエラー';
       
       render(<ActivityCard activity={testActivity} />);
       

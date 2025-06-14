@@ -198,7 +198,7 @@ describe('MemberForm', () => {
 
     it('should display error message when submission fails', () => {
       // Set error state
-      mockAsyncState.error = 'メンバーの作成に失敗しました';
+      mockAsyncState.error = 'メンバーの作成に失敗しました' as any;
 
       render(<MemberForm />);
       

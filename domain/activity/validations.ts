@@ -229,8 +229,7 @@ export const validateCreateActivityCommand = (
   // Business logic validation
   const datesResult = validateActivityDates(
     command.startDate,
-    command.endDate,
-    command.dueDate
+    command.endDate
   );
   if (datesResult.isErr()) {
     return err(datesResult.error);

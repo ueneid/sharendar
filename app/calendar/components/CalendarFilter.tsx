@@ -7,7 +7,7 @@ export const CalendarFilter = () => {
   const familyMembers = useFamilyMembers();
   
   // TODO: 統一ActivityStoreでのフィルター機能実装
-  const filter = { memberIds: [], showCompleted: true };
+  const filter = { memberIds: [] as string[], showCompleted: true };
 
   const handleMemberToggle = (memberId: string) => {
     // TODO: ActivityStoreでのフィルター更新

@@ -15,7 +15,7 @@ import {
 import { ja } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import type { Activity } from '@/domain/activity/types';
-import { EventCard } from './EventCard';
+import { ActivityCard } from '@/components/activity/ActivityCard';
 
 interface MonthViewProps {
   activities: Activity[];
@@ -160,7 +160,7 @@ export const MonthView = ({ activities, selectedDate, onDateSelect }: MonthViewP
               {/* アクティビティリスト */}
               <div className="space-y-1 overflow-y-auto max-h-[80px]">
                 {dayActivities.slice(0, 3).map((activity) => (
-                  <EventCard
+                  <ActivityCard
                     key={activity.id}
                     activity={activity}
                     compact

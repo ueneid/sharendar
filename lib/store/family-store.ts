@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { FamilyMember } from '@/domain/family/types';
-import type { Priority } from '@/domain/tasks/types';
+import type { ActivityPriority } from '@/domain/activity/types';
 import { getFamilyMemberUseCase } from './container';
 import { createAsyncActions, createInitialAsyncState, normalizeError } from './helpers';
 import type { AsyncState, BaseStore } from './types';

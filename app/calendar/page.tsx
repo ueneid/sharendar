@@ -8,12 +8,16 @@ import { useActivityStore } from '@/lib/store/activity-store';
 import { useFamilyMemberStore } from '@/lib/store';
 import { MonthView } from './components/MonthView';
 import { CalendarFilter } from './components/CalendarFilter';
+import { ActivityCard } from '@/components/activity/ActivityCard';
+import { ActivityForm } from '@/components/activity/ActivityForm';
+import type { Activity } from '@/domain/activity/types';
 
 export default function CalendarPage() {
   const { loadAllActivities, activities, isLoading, error } = useActivityStore();
   const { loadMembers } = useFamilyMemberStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
   
   // 初期データロード
   useEffect(() => {
@@ -37,7 +41,18 @@ export default function CalendarPage() {
     : [];
 
   const handleAddEvent = () => {
+    setEditingActivity(undefined);
     setShowEventForm(true);
+  };
+
+  const handleEditActivity = (activity: Activity) => {
+    setEditingActivity(activity);
+    setShowEventForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowEventForm(false);
+    setEditingActivity(undefined);
   };
 
   return (
@@ -85,26 +100,11 @@ export default function CalendarPage() {
                 {selectedDateActivities.length > 0 ? (
                   <div className="space-y-2">
                     {selectedDateActivities.map((activity) => (
-                      <div key={activity.id} className="p-3 border border-gray-200 rounded-lg">
-                        <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            activity.category === 'event' ? 'bg-blue-100 text-blue-700' :
-                            activity.category === 'task' ? 'bg-green-100 text-green-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {activity.category === 'event' ? 'イベント' :
-                             activity.category === 'task' ? 'タスク' :
-                             activity.category}
-                          </span>
-                          {activity.startTime && (
-                            <span className="text-xs text-gray-600">{activity.startTime}</span>
-                          )}
-                        </div>
-                        {activity.description && (
-                          <p className="text-sm text-gray-500 mt-1">{activity.description}</p>
-                        )}
-                      </div>
+                      <ActivityCard
+                        key={activity.id}
+                        activity={activity}
+                        compact
+                      />
                     ))}
                   </div>
                 ) : (
@@ -157,26 +157,11 @@ export default function CalendarPage() {
               {selectedDateActivities.length > 0 ? (
                 <div className="space-y-2">
                   {selectedDateActivities.map((activity) => (
-                    <div key={activity.id} className="p-3 border border-gray-200 rounded-lg">
-                      <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          activity.category === 'event' ? 'bg-blue-100 text-blue-700' :
-                          activity.category === 'task' ? 'bg-green-100 text-green-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {activity.category === 'event' ? 'イベント' :
-                           activity.category === 'task' ? 'タスク' :
-                           activity.category}
-                        </span>
-                        {activity.startTime && (
-                          <span className="text-xs text-gray-600">{activity.startTime}</span>
-                        )}
-                      </div>
-                      {activity.description && (
-                        <p className="text-sm text-gray-500 mt-1">{activity.description}</p>
-                      )}
-                    </div>
+                    <ActivityCard
+                      key={activity.id}
+                      activity={activity}
+                      compact
+                    />
                   ))}
                 </div>
               ) : (
@@ -198,22 +183,13 @@ export default function CalendarPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* モーダル */}
+      {/* ActivityForm モーダル */}
       {showEventForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">新しいアクティビティ</h2>
-              <p className="text-gray-600">統一Activityフォームは実装中です</p>
-              <button
-                onClick={() => setShowEventForm(false)}
-                className="mt-4 px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
-              >
-                閉じる
-              </button>
-            </div>
-          </div>
-        </div>
+        <ActivityForm
+          mode={editingActivity ? "edit" : "create"}
+          activity={editingActivity}
+          onClose={handleCloseForm}
+        />
       )}
     </div>
   );

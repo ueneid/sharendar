@@ -409,7 +409,7 @@ describe('ActivityForm', () => {
     });
 
     it('should clear error state when closing', async () => {
-      mockUseActivityStore.error = 'テストエラー';
+      mockUseActivityStore.error = 'テストエラー' as any;
       
       render(<ActivityForm mode="create" onClose={mockOnClose} />);
       
@@ -457,7 +457,7 @@ describe('ActivityForm', () => {
 
   describe('error handling', () => {
     it('should display store errors', () => {
-      mockUseActivityStore.error = 'データベースエラー';
+      mockUseActivityStore.error = 'データベースエラー' as any;
       
       render(<ActivityForm mode="create" onClose={mockOnClose} />);
       
@@ -465,7 +465,7 @@ describe('ActivityForm', () => {
     });
 
     it('should clear errors when form is modified', async () => {
-      mockUseActivityStore.error = 'エラーメッセージ';
+      mockUseActivityStore.error = 'エラーメッセージ' as any;
       
       render(<ActivityForm mode="create" onClose={mockOnClose} />);
       

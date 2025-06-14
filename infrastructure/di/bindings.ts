@@ -4,7 +4,7 @@ import type { Container } from 'inversify';
 import { TYPES } from '@/application/shared/types';
 import type { IFamilyMemberRepository } from '@/domain/family/repository';
 import type { ActivityRepository } from '@/domain/activity/repository';
-import { FamilyMemberRepository } from '@/infrastructure/db/repository';
+// import { FamilyMemberRepository } from '@/infrastructure/db/repository'; // 削除済み
 import { DexieActivityRepository } from '@/infrastructure/db/activity-repository';
 import { FamilyMemberUseCase } from '@/application/family/use-cases';
 import { ActivityUseCase } from '@/application/activity/use-cases';
@@ -12,8 +12,8 @@ import { ActivityUseCase } from '@/application/activity/use-cases';
 /**
  * Infrastructure層でRepositoryを@injectableにする
  */
-@injectable()
-class InjectableFamilyMemberRepository extends FamilyMemberRepository {}
+// @injectable()
+// class InjectableFamilyMemberRepository extends FamilyMemberRepository {}
 
 @injectable()
 class InjectableActivityRepository extends DexieActivityRepository {}
@@ -24,9 +24,9 @@ class InjectableActivityRepository extends DexieActivityRepository {}
  */
 export const configureContainer = (container: Container): void => {
   // Repository のバインディング
-  container.bind<IFamilyMemberRepository>(TYPES.IFamilyMemberRepository)
-           .to(InjectableFamilyMemberRepository)
-           .inSingletonScope();
+  // container.bind<IFamilyMemberRepository>(TYPES.IFamilyMemberRepository)
+  //          .to(InjectableFamilyMemberRepository)
+  //          .inSingletonScope();
 
   container.bind<ActivityRepository>('ActivityRepository')
            .to(InjectableActivityRepository)

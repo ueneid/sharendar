@@ -59,8 +59,8 @@ describe('ActivityUseCase', () => {
         memberIds: ['member-1'],
         dueDate: '2025-06-20',
         checklist: [
-          { title: 'チェック項目1' },
-          { title: 'チェック項目2' }
+          { title: 'チェック項目1', checked: false },
+          { title: 'チェック項目2', checked: false }
         ]
       };
       

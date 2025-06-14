@@ -42,13 +42,13 @@ export class ActivityUseCase {
     const activity = createActivity(
       command.title,
       command.category,
-      command.priority,
+      command.priority || 'medium',
       {
         startDate: command.startDate,
         endDate: command.endDate,
         dueDate: command.dueDate,
         isAllDay: command.isAllDay,
-        memberIds: command.memberIds,
+        memberIds: command.memberIds ? [...command.memberIds] : undefined,
         description: command.description
       }
     );

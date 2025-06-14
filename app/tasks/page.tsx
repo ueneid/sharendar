@@ -1,16 +1,19 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckSquare, Plus, Filter as FilterIcon, AlertCircle } from 'lucide-react';
 import { useActivityStore } from '@/lib/store/activity-store';
 import { useFamilyMemberStore } from '@/lib/store';
-import { TaskCard } from './components/TaskCard';
-import { TaskForm } from './components/TaskForm';
+import { ActivityCard } from '@/components/activity/ActivityCard';
+import { ActivityForm } from '@/components/activity/ActivityForm';
 import { TaskFilter } from './components/TaskFilter';
+import type { Activity } from '@/domain/activity/types';
 
 export default function TasksPage() {
   const { loadAllActivities, activities, isLoading, error } = useActivityStore();
   const { loadMembers } = useFamilyMemberStore();
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
   
   // Taskカテゴリーのアクティビティをフィルター
   const taskActivities = useMemo(() => {
@@ -34,8 +37,18 @@ export default function TasksPage() {
   }, [loadMembers, loadAllActivities]);
 
   const handleAddTask = () => {
-    // TODO: 統一Activityフォームでのタスク作成
-    console.log('タスク追加');
+    setEditingActivity(undefined);
+    setShowTaskForm(true);
+  };
+
+  const handleEditActivity = (activity: Activity) => {
+    setEditingActivity(activity);
+    setShowTaskForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowTaskForm(false);
+    setEditingActivity(undefined);
   };
 
   const handleShowOverdue = () => {
@@ -137,7 +150,7 @@ export default function TasksPage() {
                     <div className="divide-y divide-gray-200">
                       {pendingTasks.map((task) => (
                         <div key={task.id} className="p-4">
-                          <TaskCard activity={task} />
+                          <ActivityCard activity={task} />
                         </div>
                       ))}
                     </div>
@@ -155,7 +168,7 @@ export default function TasksPage() {
                     <div className="border-t border-gray-200 divide-y divide-gray-200">
                       {completedTasks.map((task) => (
                         <div key={task.id} className="p-4">
-                          <TaskCard activity={task} />
+                          <ActivityCard activity={task} />
                         </div>
                       ))}
                     </div>
@@ -210,8 +223,14 @@ export default function TasksPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* モーダル */}
-      <TaskForm />
+      {/* ActivityForm モーダル */}
+      {showTaskForm && (
+        <ActivityForm
+          mode={editingActivity ? "edit" : "create"}
+          activity={editingActivity}
+          onClose={handleCloseForm}
+        />
+      )}
     </div>
   );
 }

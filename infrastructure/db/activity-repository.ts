@@ -55,7 +55,10 @@ export class DexieActivityRepository implements ActivityRepository {
       tags: dbActivity.tags || [],
       
       // 将来拡張
-      recurrence: dbActivity.recurrence,
+      recurrence: dbActivity.recurrence ? {
+        ...dbActivity.recurrence,
+        endDate: dbActivity.recurrence.endDate ? asDateString(dbActivity.recurrence.endDate) : undefined
+      } as any : undefined,
     };
   }
   
@@ -295,7 +298,7 @@ export class DexieActivityRepository implements ActivityRepository {
       const taskActivities: DBActivity[] = tasks.map(task => ({
         id: `migrated_task_${task.id}`,
         title: task.title,
-        description: task.memo,
+        description: (task as any).memo || undefined,
         startDate: undefined,
         startTime: undefined,
         endDate: undefined,

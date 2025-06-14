@@ -17,7 +17,7 @@ const priorityStyles = {
   low: 'border-l-green-400'
 };
 
-const categoryLabels = {
+const categoryLabels: Record<string, string> = {
   event: 'イベント',
   task: 'タスク',
   deadline: 'deadline'

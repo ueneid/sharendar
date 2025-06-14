@@ -172,8 +172,10 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
 
         // イベントの時間設定
         if (formData.category === 'event' && !formData.isAllDay) {
-          command.startTime = formData.startTime || undefined;
-          command.endTime = formData.endTime || undefined;
+          Object.assign(command, {
+            startTime: formData.startTime || undefined,
+            endTime: formData.endTime || undefined
+          });
         }
 
         await createActivity(command);
@@ -199,8 +201,10 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
 
         // イベントの時間設定
         if (formData.category === 'event' && !formData.isAllDay) {
-          command.startTime = formData.startTime || undefined;
-          command.endTime = formData.endTime || undefined;
+          Object.assign(command, {
+            startTime: formData.startTime || undefined,
+            endTime: formData.endTime || undefined
+          });
         }
 
         await updateActivity(activity.id, command);
