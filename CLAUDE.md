@@ -28,22 +28,18 @@ Sharendar はスマートフォンでの利用を前提とした web app です�
    - 名前、学年、写真、メモなど登録
    - 各予定・タスクの担当を子ども単位でも割り振り
 
-3. **カレンダー共有**
-   - 家族のイベント・予定を日付・時間指定で登録
-   - 担当者（家族メンバー）設定可
-   - カレンダー表示（家族全体・個人別の切り替え）
+3. **統一Activity管理**（CalendarEventとTaskを統合）
+   - あらゆる活動（イベント、タスク、締切）を統一Activityとして管理
+   - カテゴリー（event/task/deadline）で分類
+   - カレンダービューとタスクビューで同じデータを異なる視点で表示
+   - 優先度、ステータス、チェックリスト、担当者など包括的な属性
 
-4. **タスク管理・チェックリスト**
-   - 家族単位・個人単位でタスク（ToDo/持ち物/やること）作成
-   - 担当者割当、期限、優先度
-   - チェックリスト形式で進捗可視化（親が代理でチェック可）
-
-5. **プリントOCR機能（α版）**
+4. **プリントOCR機能（α版）**
    - 写真をアップロード
    - OCRで日付・イベント名・持ち物抽出（API or AI agentで開発）
-   - 抽出内容をカレンダーやタスクに自動登録（手修正できるUI）
+   - 抽出内容をActivityとして自動登録（手修正できるUI）
 
-6. **通知・リマインダー**（後から追加もOK）
+5. **通知・リマインダー**（後から追加もOK）
    - 予定・タスクの前日/当日に親へ通知（メールやLINE通知など）
 
 ## Key Commands
@@ -67,270 +63,277 @@ npm run type-check
 npm run lint
 ```
 
-### Installation
+### Testing
 
 ```bash
-# 依存関係のインストール
-npm install
+# 全テストを実行
+npm test
 
-# 開発環境のセットアップ
-npm run dev
+# テストをウォッチモードで実行
+npm run test:watch
+
+# テストUIを起動（ブラウザでテスト結果を確認）
+npm run test:ui
+
+# 特定のテストファイルを実行
+npm test -- [ファイルパス]
+# 例: npm test -- __tests__/domain/activity/types.test.ts
+
+# テストカバレッジを確認
+npm test -- --coverage
 ```
 
-## Architecture (MVP版)
+### Build and Export
+
+```bash
+# 静的エクスポート（PWA用）
+npm run export
+```
+
+## Architecture
 
 ### 設計思想
-関数型ドメインモデリングを採用したMVP設計：
+Clean Architecture + 関数型ドメインモデリング + TDDアプローチ：
 - **純粋関数**：副作用を分離し、ビジネスロジックを純粋に保つ
 - **イミュータブル**：すべてのデータ構造を不変に
 - **型安全**：Brand型で実行時エラーを防ぐ
-- **エラーハンドリング**：Result型でエラーを値として扱う
-- **オフラインファースト**：ローカルストレージで完結
-- **段階的拡張**：将来の機能追加を考慮した設計
+- **エラーハンドリング**：Result型（neverthrow）でエラーを値として扱う
+- **依存性注入**：InversifyJSによるDIコンテナ
+- **オフラインファースト**：IndexedDB (Dexie.js)によるローカルストレージ
+- **TDD駆動開発**：テストファースト開発により高品質を保証
 
-### 技術スタック（MVP）
+### 技術スタック
 
-#### フロントエンド（単体アプリ）
-- **Framework**: Next.js 14 (Static Export)
-- **言語**: TypeScript
+- **Framework**: Next.js 14 (App Router)
+- **言語**: TypeScript (strict mode)
 - **スタイリング**: Tailwind CSS
 - **データストレージ**: IndexedDB (Dexie.js)
-- **状態管理**: Zustand
-- **PWA**: next-pwa
-- **OCR**: Google Cloud Vision API
+- **状態管理**: Zustand (with middleware)
+- **DI Container**: InversifyJS
+- **テスト**: Vitest + React Testing Library
+- **エラーハンドリング**: neverthrow
+- **アイコン**: Lucide React
+- **日付処理**: date-fns
 
-#### 将来の拡張（Post-MVP）
-- **認証**: Supabase Auth
-- **データ同期**: Supabase Realtime
-- **通知**: Web Push API
+### 統一Activityドメインモデル
 
-### ドメインモデル（関数型アプローチ - MVP版）
+最近の大きな変更：CalendarEventとTaskを統一した`Activity`エンティティに移行しました。
 
 ```typescript
-// Brand Types for type safety
-type MemberId = string & { readonly brand: unique symbol };
-type EventId = string & { readonly brand: unique symbol };
-type TaskId = string & { readonly brand: unique symbol };
-type DateString = string & { readonly brand: unique symbol }; // YYYY-MM-DD
-type TimeString = string & { readonly brand: unique symbol }; // HH:MM
-
-// Value Objects
-type MemberName = string & { readonly brand: unique symbol };
-type EventTitle = string & { readonly brand: unique symbol };
-type TaskTitle = string & { readonly brand: unique symbol };
-type Color = string & { readonly brand: unique symbol };
-
-// Domain Entities (immutable)
-type FamilyMember = Readonly<{
-  id: MemberId;
-  name: MemberName;
-  avatar?: string;
-  color: Color;
-}>;
-
-type CalendarEvent = Readonly<{
-  id: EventId;
-  title: EventTitle;
-  date: DateString;
-  time?: TimeString;
-  memberIds: ReadonlyArray<MemberId>;
-  type: 'event' | 'task';
-  memo?: string;
-}>;
-
-type Task = Readonly<{
-  id: TaskId;
-  title: TaskTitle;
+// 統一Activityドメイン（/domain/activity/types.ts）
+type Activity = Readonly<{
+  id: ActivityId;
+  title: ActivityTitle;
+  description?: string;
+  
+  // 柔軟な時間モデル
+  startDate?: DateString;
+  startTime?: TimeString;
+  endDate?: DateString;
+  endTime?: TimeString;
   dueDate?: DateString;
-  priority: Priority;
-  status: TaskStatus;
-  memberIds: ReadonlyArray<MemberId>;
+  isAllDay: boolean;
+  
+  // 分類・状態
+  category: ActivityCategory; // 'event' | 'task' | 'deadline'
+  status: ActivityStatus;     // 'pending' | 'completed'
+  priority: ActivityPriority; // 'high' | 'medium' | 'low'
+  
+  // タスク機能
   checklist: ReadonlyArray<ChecklistItem>;
-  createdAt: DateString;
   completedAt?: DateString;
+  
+  // その他
+  memberIds: ReadonlyArray<MemberId>;
+  createdAt: DateString;
+  updatedAt: DateString;
 }>;
+```
 
-type Priority = 'high' | 'medium' | 'low';
-type TaskStatus = 'pending' | 'completed';
+### レイヤード・アーキテクチャ
 
-type ChecklistItem = Readonly<{
-  id: string;
-  title: string;
-  checked: boolean;
-}>;
+```
+┌─────────────────────────────────────────────────────────┐
+│                    UI層 (app/, components/)              │
+│  - Next.js App Router pages                             │
+│  - React Components (ActivityCard, ActivityForm)         │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│                 Store層 (lib/store/)                     │
+│  - Zustand stores (ActivityStore, FamilyMemberStore)    │
+│  - DIコンテナ初期化                                      │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│             Application層 (application/)                 │
+│  - Use Cases (ActivityUseCase, FamilyMemberUseCase)     │
+│  - Commands/Queries (CQRS pattern)                      │
+│  - Domain serviceの調整                                  │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│                Domain層 (domain/)                        │
+│  - 純粋なビジネスロジック                                │
+│  - 型定義 (Activity, FamilyMember)                      │
+│  - Domain operations (純粋関数)                         │
+│  - Validations                                          │
+│  - Repository interfaces                                │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│            Infrastructure層 (infrastructure/)            │
+│  - Repository実装 (DexieActivityRepository)             │
+│  - DIコンテナ設定 (bindings.ts)                         │
+│  - 外部サービス連携                                      │
+└─────────────────────────────────────────────────────────┘
+```
 
-// Smart Constructors with validation
+### 重要なディレクトリ構造
+
+```
+/domain/activity/         # 統一Activityドメイン
+  types.ts               # Activity型定義、カテゴリ、ステータス等
+  operations.ts          # createActivity, updateActivity等の純粋関数
+  validations.ts         # バリデーションロジック
+  repository.ts          # ActivityRepositoryインターフェース
+
+/application/activity/    # Activityアプリケーション層
+  use-cases.ts          # ActivityUseCase (CQRS)
+  commands.ts           # CreateActivityCommand等
+  queries.ts            # GetActivityByIdQuery等
+
+/infrastructure/
+  /db/
+    activity-repository.ts  # Dexie実装
+    schema.ts              # DBスキーマ定義
+  /di/
+    bindings.ts            # DIコンテナ設定
+
+/lib/store/
+  activity-store.ts        # Zustand Activityストア
+  container.ts             # DIコンテナ初期化
+
+/components/activity/      # Activity UIコンポーネント
+  ActivityCard.tsx         # Activity表示カード
+  ActivityForm.tsx         # Activity作成/編集フォーム
+```
+
+### DIコンテナの使用
+
+```typescript
+// DIコンテナでの依存性解決
+const container = getInitializedContainer();
+const activityUseCase = container.get<ActivityUseCase>('ActivityUseCase');
+
+// ストアでの使用例
+const result = await activityUseCase.createActivity(command);
+if (result.isErr()) {
+  set({ error: result.error.message });
+}
+```
+
+### データフロー
+
+1. **UI Component** → イベント発生
+2. **Store** → アクション呼び出し（例: createActivity）
+3. **UseCase** → ビジネスロジック実行、バリデーション
+4. **Domain** → 純粋関数でエンティティ作成/更新
+5. **Repository** → IndexedDBに永続化
+6. **Store** → 状態更新
+7. **UI Component** → 再レンダリング
+
+## Important Patterns and Conventions
+
+### Brand Types (型安全性)
+
+```typescript
+// すべてのIDはBrand型で定義（domain/shared/branded-types.ts）
+type ActivityId = string & { readonly brand: unique symbol };
+type MemberId = string & { readonly brand: unique symbol };
+
+// 使用時は必ずas関数を通す
+const id = asActivityId('activity-123');
+```
+
+### Result型によるエラーハンドリング
+
+```typescript
+// neverthrowのResult型を使用
 import { Result, ok, err } from 'neverthrow';
 
-const createMemberName = (value: string): Result<MemberName, string> => {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) return err('名前を入力してください');
-  if (trimmed.length > 20) return err('名前は20文字以内で入力してください');
-  return ok(trimmed as MemberName);
+// すべてのバリデーションはResult型を返す
+const validateTitle = (title: string): Result<ActivityTitle, ActivityError> => {
+  if (!title.trim()) {
+    return err(new ActivityError('VALIDATION_ERROR', 'タイトルは必須です'));
+  }
+  return ok(asActivityTitle(title));
 };
-
-const createDateString = (value: string): Result<DateString, string> => {
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(value)) return err('日付の形式が正しくありません');
-  return ok(value as DateString);
-};
-
-const createColor = (value: string): Result<Color, string> => {
-  const colorRegex = /^#[0-9A-Fa-f]{6}$/;
-  if (!colorRegex.test(value)) return err('カラーコードの形式が正しくありません');
-  return ok(value as Color);
-};
-
-// Domain Operations (pure functions)
-const createFamilyMember = (
-  name: MemberName,
-  color: Color,
-  avatar?: string
-): FamilyMember => ({
-  id: generateId() as MemberId,
-  name,
-  color,
-  avatar,
-});
-
-const assignMembersToTask = (
-  task: Task,
-  memberIds: ReadonlyArray<MemberId>
-): Task => ({
-  ...task,
-  memberIds,
-});
-
-const completeTask = (
-  task: Task,
-  completedAt: DateString
-): Task => ({
-  ...task,
-  status: 'completed' as const,
-  completedAt,
-});
-
-const toggleChecklistItem = (
-  task: Task,
-  itemId: string
-): Task => ({
-  ...task,
-  checklist: task.checklist.map(item =>
-    item.id === itemId
-      ? { ...item, checked: !item.checked }
-      : item
-  ),
-});
-
-// ドメイン操作の例
-const taskProgress = calculateChecklistProgress(task.checklist);
-const overdueTasks = filterOverdueTasks(allTasks, today);
-const memberEvents = filterEventsByMember(allEvents, memberId);
 ```
 
-### ディレクトリ構造（MVP版）
+### テスト駆動開発 (TDD)
 
-```
-/app                    # Next.js App Router（UI層）
-  /calendar            # カレンダー画面
-  /tasks               # タスク画面
-  /ocr                 # OCR画面
-  /settings            # 設定（家族メンバー管理）
-  page.tsx             # ダッシュボード
-/domain                # ドメイン層（純粋なビジネスロジック）
-  /family              # 家族メンバー
-    /types.ts          # 型定義
-    /operations.ts     # ドメイン操作（純粋関数）
-    /validations.ts    # バリデーション
-  /calendar            # カレンダー
-    /types.ts
-    /operations.ts
-    /validations.ts
-  /tasks               # タスク
-    /types.ts
-    /operations.ts
-    /validations.ts
-  /shared              # 共通
-    /branded-types.ts  # Brand型定義
-/infrastructure        # インフラ層（副作用）
-  /db                  # IndexedDB (Dexie.js)
-    /repository.ts     # Repository実装
-    /schema.ts         # DBスキーマ
-  /ocr                 # OCR処理
-    /google-vision.ts  # Google Vision API
-/application          # アプリケーション層（ユースケース）
-  /family              # 家族メンバー管理
-  /calendar            # カレンダー管理
-  /tasks               # タスク管理
-/components           # UIコンポーネント
-  /calendar
-  /tasks
-  /common
-/lib                  # 共通ライブラリ
-  /store              # Zustand ストア
-  /utils              # ユーティリティ
-/public
-  /icons              # PWAアイコン
-/docs                 # ドキュメント
+1. **テストファースト**: 実装前にテストを書く
+2. **テストファイル配置**: `__tests__/`ディレクトリに同じ構造で配置
+3. **モック**: Vitestの`vi.mock()`を使用
+4. **React Testing Library**: UIコンポーネントのテスト
+
+```typescript
+// テストの例（__tests__/domain/activity/types.test.ts）
+describe('Activity Domain', () => {
+  it('should create a valid activity', () => {
+    const result = createActivity('タイトル', 'task', 'medium');
+    expect(result).toBeDefined();
+    expect(result.title).toBe('タイトル');
+  });
+});
 ```
 
-## Important Notes
+### Zustandストアパターン
 
-### 技術選定の比較：KMP vs Next.js PWA
+```typescript
+// ストアは必ずinterfaceを定義
+interface ActivityStore {
+  // State
+  activities: Activity[];
+  isLoading: boolean;
+  error: string | null;
+  
+  // Actions (async含む)
+  loadAllActivities: () => Promise<void>;
+  createActivity: (command: CreateActivityCommand) => Promise<void>;
+}
 
-#### Kotlin Multiplatform (Native App)
+// subscribeWithSelectorミドルウェアを使用
+export const useActivityStore = create<ActivityStore>()(
+  subscribeWithSelector((set, get) => ({
+    // implementation
+  }))
+);
+```
 
-**メリット**
-- **優れたオフライン機能**：SQLiteによる完全なローカルDB
-- **高度なカメラ/画像処理**：OCR前処理が容易
-- **ネイティブ通知**：より確実な通知配信
-- **関数型サポート**：Arrow-ktで本格的な関数型プログラミング
-- **型安全性**：Kotlinの強力な型システム
+### DIコンテナ注意点
 
-**デメリット**
-- **開発期間**：iOS/Androidの両対応で時間がかかる
-- **アプリストア審査**：リリースに時間がかかる
-- **更新の手間**：ユーザーのアプリ更新が必要
-- **初期開発コスト**：高い
+1. **シンボルの定義**: `TYPES`オブジェクトまたは文字列リテラル
+2. **スコープ**: Repository は`inSingletonScope()`、UseCase は`inTransientScope()`
+3. **初期化**: `getInitializedContainer()`で自動初期化
 
-#### Next.js + TypeScript (PWA)
+### データベーススキーマ変更
 
-**メリット**
-- **即座にリリース可能**：審査不要
-- **開発速度**：単一コードベースで高速開発
-- **更新が簡単**：サーバー側で即反映
-- **初期開発コスト**：低い
-- **Supabaseとの相性**：優れた統合
+Dexieでスキーマを変更する場合：
 
-**デメリット**
-- **iOS制限**：PWAの機能制限（通知など）
-- **オフライン機能**：制限あり
-- **カメラアクセス**：ブラウザ依存
+```typescript
+// infrastructure/db/schema.ts
+db.version(3).stores({
+  activities: '++id, category, status, [category+status], createdAt, updatedAt'
+});
+```
 
-### 推奨：Next.js PWAでMVP開発
+バージョンを上げて、インデックスを追加/変更。
 
-**理由**
-1. **スピード重視**：家族向けアプリは早期にフィードバックを得ることが重要
-2. **頻繁な更新**：学校行事などの機能追加が多い領域
-3. **コスト効率**：単一コードベースで保守が容易
-4. **段階的移行可能**：将来的にKMPへの移行も可能
+### 開発時の注意事項
 
-**段階的アプローチ**
-1. Phase 1: Next.js PWAでMVPリリース
-2. Phase 2: ユーザーフィードバックを収集
-3. Phase 3: 必要に応じてKMPでネイティブ版開発
-
-**PWAの制限への対処法**
-- **通知**：メール/LINE通知で補完
-- **オフライン**：Service Workerで基本機能は確保
-- **OCR**：サーバーサイドで処理
-
-### 関数型プログラミングの実装
-
-TypeScriptでも十分な関数型プログラミングが可能：
-- fp-ts/Effect-TSライブラリ
-- neverthrowでResult型
-- Zodでスキーマバリデーション
-- イミュータブルデータ構造
-
-KMPを選択する場合は、Arrow-ktを使用してより本格的な関数型プログラミングが可能ですが、MVPフェーズではTypeScriptで十分です。
+1. **統一Activityドメイン**: CalendarEventとTaskは廃止済み。すべて`Activity`を使用
+2. **日本語エラーメッセージ**: ユーザー向けメッセージは日本語で
+3. **モバイルファースト**: レスポンシブデザインは必須
+4. **PWA対応**: オフライン動作を考慮した実装
