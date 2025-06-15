@@ -96,7 +96,7 @@ Clean Architecture + 関数型ドメインモデリング + TDDアプローチ�
 
 ### 統一Activityドメインモデル
 
-最近の大きな変更：CalendarEventとTaskを統一した`Activity`エンティティに移行しました。
+CalendarEventとTaskを統一した`Activity`エンティティに完全移行済みです。
 
 ```typescript
 // 統一Activityドメイン（/domain/activity/types.ts）
@@ -114,8 +114,8 @@ type Activity = Readonly<{
   isAllDay: boolean;
   
   // 分類・状態
-  category: ActivityCategory; // 'event' | 'task' | 'deadline'
-  status: ActivityStatus;     // 'pending' | 'completed'
+  category: ActivityCategory; // 7種類: 'event' | 'task' | 'appointment' | 'deadline' | 'meeting' | 'milestone' | 'reminder'
+  status: ActivityStatus;     // 5種類: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'postponed'
   priority: ActivityPriority; // 'high' | 'medium' | 'low'
   
   // タスク機能
@@ -124,8 +124,11 @@ type Activity = Readonly<{
   
   // その他
   memberIds: ReadonlyArray<MemberId>;
+  location?: string;
+  tags: ReadonlyArray<string>;
   createdAt: DateString;
   updatedAt: DateString;
+  recurrence?: RecurrencePattern;
 }>;
 ```
 
@@ -196,6 +199,13 @@ type Activity = Readonly<{
 /components/activity/      # Activity UIコンポーネント
   ActivityCard.tsx         # Activity表示カード
   ActivityForm.tsx         # Activity作成/編集フォーム
+
+/app/calendar/components/  # カレンダー専用コンポーネント
+  CalendarFilter.tsx       # カレンダーフィルター
+  MonthView.tsx           # 月表示
+
+/app/tasks/components/     # タスク専用コンポーネント
+  TaskFilter.tsx          # タスクフィルター
 ```
 
 ### DIコンテナの使用
@@ -231,6 +241,33 @@ Store State Update
     ↓
 UI Re-render
 ```
+
+## Recent Features
+
+### フィルタリング機能（2025年6月実装）
+
+ActivityStoreに統合されたフィルタリング機能：
+
+```typescript
+// フィルター設定
+useActivityStore().setFilter('categories', ['task', 'event']);
+useActivityStore().setFilter('statuses', ['pending']);
+useActivityStore().setFilter('memberIds', ['member-1']);
+
+// フィルター済みデータ取得
+const filtered = useActivityStore().getFilteredActivities();
+
+// フィルタークリア
+useActivityStore().resetFilters();
+```
+
+**利用可能なフィルター**:
+- カテゴリ（複数選択可）
+- ステータス（複数選択可）
+- 優先度（複数選択可）
+- メンバーID（複数選択可）
+- 日付範囲（startDate, endDate）
+- 完了済み表示切り替え（showCompleted）
 
 ## Important Patterns and Conventions
 
@@ -328,15 +365,14 @@ db.version(3).stores({
 - カレンダー/タスクページでの統合表示
 - DIコンテナによる依存性注入
 - Zustandストアの実装
-
-### 🚧 実装中
-- フィルタリング機能（メンバー別、ステータス別）
+- 包括的フィルタリング機能（カテゴリ、ステータス、優先度、メンバー、日付範囲）
 
 ### 📋 未実装
 - OCR機能（Google Vision API統合）
 - 通知・リマインダー機能
 - データ同期（Supabase統合）
 - 繰り返し予定機能
+- PWA最適化（Service Worker）
 
 ## Critical Notes
 
@@ -345,3 +381,34 @@ db.version(3).stores({
 3. **Result型でエラーハンドリング**: throw/catch ではなく Result<T, E> を使用
 4. **テストファースト**: 実装前に必ずテストを書く
 5. **日本語UI**: エラーメッセージ、ラベル等はすべて日本語
+
+## Common Issues & Solutions
+
+### テストでのBrand型エラー
+```typescript
+// ❌ 間違い
+const activity = { id: 'test-1', title: 'テスト' };
+
+// ✅ 正しい
+const activity = { 
+  id: asActivityId('test-1'), 
+  title: asActivityTitle('テスト') 
+};
+```
+
+### DIコンテナの初期化忘れ
+```typescript
+// ❌ 間違い
+const activityUseCase = new ActivityUseCase();
+
+// ✅ 正しい
+const container = getInitializedContainer();
+const activityUseCase = container.get<ActivityUseCase>('ActivityUseCase');
+```
+
+### フィルター適用時の注意
+```typescript
+// フィルターは配列で指定
+store.setFilter('categories', ['task', 'event']); // ✅
+store.setFilter('categories', 'task'); // ❌
+```
