@@ -233,7 +233,7 @@ export default function HomePage() {
                       {activity.description && (
                         <p className="text-sm text-gray-500 mt-1">{activity.description}</p>
                       )}
-                      {activity.checklist.length > 0 && (
+                      {activity.checklist && activity.checklist.length > 0 && (
                         <p className="text-xs text-gray-400 mt-1">
                           チェックリスト: {activity.checklist.filter(item => item.checked).length}/{activity.checklist.length}
                         </p>
