@@ -3,24 +3,20 @@ import { injectable } from 'inversify';
 import type { Container } from 'inversify';
 import { TYPES } from '@/application/shared/types';
 import type { IFamilyMemberRepository } from '@/domain/family/repository';
-import type { ICalendarEventRepository } from '@/domain/calendar/repository';
-import type { ITaskRepository } from '@/domain/tasks/repository';
-import { FamilyMemberRepository, CalendarEventRepository, TaskRepository } from '@/infrastructure/db/repository';
+import type { ActivityRepository } from '@/domain/activity/repository';
+// import { FamilyMemberRepository } from '@/infrastructure/db/repository'; // 削除済み
+import { DexieActivityRepository } from '@/infrastructure/db/activity-repository';
 import { FamilyMemberUseCase } from '@/application/family/use-cases';
-import { CalendarEventUseCase } from '@/application/calendar/use-cases';
-import { TaskUseCase } from '@/application/tasks/use-cases';
+import { ActivityUseCase } from '@/application/activity/use-cases';
 
 /**
  * Infrastructure層でRepositoryを@injectableにする
  */
-@injectable()
-class InjectableFamilyMemberRepository extends FamilyMemberRepository {}
+// @injectable()
+// class InjectableFamilyMemberRepository extends FamilyMemberRepository {}
 
 @injectable()
-class InjectableCalendarEventRepository extends CalendarEventRepository {}
-
-@injectable()
-class InjectableTaskRepository extends TaskRepository {}
+class InjectableActivityRepository extends DexieActivityRepository {}
 
 /**
  * DIコンテナにバインディングを設定
@@ -28,16 +24,12 @@ class InjectableTaskRepository extends TaskRepository {}
  */
 export const configureContainer = (container: Container): void => {
   // Repository のバインディング
-  container.bind<IFamilyMemberRepository>(TYPES.IFamilyMemberRepository)
-           .to(InjectableFamilyMemberRepository)
-           .inSingletonScope();
+  // container.bind<IFamilyMemberRepository>(TYPES.IFamilyMemberRepository)
+  //          .to(InjectableFamilyMemberRepository)
+  //          .inSingletonScope();
 
-  container.bind<ICalendarEventRepository>(TYPES.ICalendarEventRepository)
-           .to(InjectableCalendarEventRepository)
-           .inSingletonScope();
-
-  container.bind<ITaskRepository>(TYPES.ITaskRepository)
-           .to(InjectableTaskRepository)
+  container.bind<ActivityRepository>('ActivityRepository')
+           .to(InjectableActivityRepository)
            .inSingletonScope();
 
   // UseCase のバインディング
@@ -45,11 +37,7 @@ export const configureContainer = (container: Container): void => {
            .to(FamilyMemberUseCase)
            .inTransientScope();
 
-  container.bind<CalendarEventUseCase>(TYPES.CalendarEventUseCase)
-           .to(CalendarEventUseCase)
-           .inTransientScope();
-
-  container.bind<TaskUseCase>(TYPES.TaskUseCase)
-           .to(TaskUseCase)
+  container.bind<ActivityUseCase>('ActivityUseCase')
+           .to(ActivityUseCase)
            .inTransientScope();
 };

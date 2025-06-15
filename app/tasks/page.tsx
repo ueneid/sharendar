@@ -1,41 +1,63 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckSquare, Plus, Filter as FilterIcon, AlertCircle } from 'lucide-react';
-import { useTaskStore, useFilteredTasks, useTaskAsync, useOverdueTasks } from '@/lib/store/tasks-store';
+import { useActivityStore } from '@/lib/store/activity-store';
 import { useFamilyMemberStore } from '@/lib/store';
-import { TaskCard } from './components/TaskCard';
-import { TaskForm } from './components/TaskForm';
+import { ActivityCard } from '@/components/activity/ActivityCard';
+import { ActivityForm } from '@/components/activity/ActivityForm';
 import { TaskFilter } from './components/TaskFilter';
+import type { Activity } from '@/domain/activity/types';
 
 export default function TasksPage() {
-  const { loadTasks, openTaskForm, setFilter } = useTaskStore();
+  const { loadAllActivities, activities, isLoading, error } = useActivityStore();
   const { loadMembers } = useFamilyMemberStore();
-  const { loading, error } = useTaskAsync();
-  const filteredTasks = useFilteredTasks();
-  const overdueTasks = useOverdueTasks();
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
+  
+  // Taskカテゴリーのアクティビティをフィルター
+  const taskActivities = useMemo(() => {
+    return activities.filter(activity => 
+      activity.category === 'task' || activity.category === 'deadline'
+    );
+  }, [activities]);
+  
+  // 期限切れタスク
+  const overdueTasks = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return taskActivities.filter(task => 
+      task.dueDate && task.dueDate < today && task.status !== 'completed'
+    );
+  }, [taskActivities]);
   
   // 初期データロード
   useEffect(() => {
     loadMembers();
-    loadTasks();
-  }, [loadMembers, loadTasks]);
+    loadAllActivities();
+  }, [loadMembers, loadAllActivities]);
 
   const handleAddTask = () => {
-    openTaskForm();
+    setEditingActivity(undefined);
+    setShowTaskForm(true);
+  };
+
+  const handleEditActivity = (activity: Activity) => {
+    setEditingActivity(activity);
+    setShowTaskForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowTaskForm(false);
+    setEditingActivity(undefined);
   };
 
   const handleShowOverdue = () => {
-    setFilter({ 
-      status: 'pending',
-      dueDateRange: {
-        end: new Date().toISOString().split('T')[0] as any
-      }
-    });
+    // TODO: ActivityStoreでのフィルター設定
+    console.log('期限切れタスク表示');
   };
 
-  const pendingTasks = filteredTasks.filter(task => task.status === 'pending');
-  const completedTasks = filteredTasks.filter(task => task.status === 'completed');
+  const pendingTasks = taskActivities.filter(task => task.status === 'pending' || task.status === 'in_progress');
+  const completedTasks = taskActivities.filter(task => task.status === 'completed');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -72,7 +94,7 @@ export default function TasksPage() {
             <h3 className="font-medium text-red-800 mb-1">エラーが発生しました</h3>
             <p className="text-red-600 text-sm">{error}</p>
             <button
-              onClick={loadTasks}
+              onClick={loadAllActivities}
               className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
             >
               再試行
@@ -110,7 +132,7 @@ export default function TasksPage() {
 
           {/* メインエリア */}
           <div className="lg:col-span-3">
-            {loading ? (
+            {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 <span className="ml-2 text-gray-600">読み込み中...</span>
@@ -128,7 +150,7 @@ export default function TasksPage() {
                     <div className="divide-y divide-gray-200">
                       {pendingTasks.map((task) => (
                         <div key={task.id} className="p-4">
-                          <TaskCard task={task} />
+                          <ActivityCard activity={task} />
                         </div>
                       ))}
                     </div>
@@ -146,7 +168,7 @@ export default function TasksPage() {
                     <div className="border-t border-gray-200 divide-y divide-gray-200">
                       {completedTasks.map((task) => (
                         <div key={task.id} className="p-4">
-                          <TaskCard task={task} />
+                          <ActivityCard activity={task} />
                         </div>
                       ))}
                     </div>
@@ -154,7 +176,7 @@ export default function TasksPage() {
                 )}
 
                 {/* 空の状態 */}
-                {filteredTasks.length === 0 && !loading && (
+                {taskActivities.length === 0 && !isLoading && (
                   <div className="bg-white rounded-lg shadow-sm p-8 text-center">
                     <CheckSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -201,8 +223,14 @@ export default function TasksPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* モーダル */}
-      <TaskForm />
+      {/* ActivityForm モーダル */}
+      {showTaskForm && (
+        <ActivityForm
+          mode={editingActivity ? "edit" : "create"}
+          activity={editingActivity}
+          onClose={handleCloseForm}
+        />
+      )}
     </div>
   );
 }
