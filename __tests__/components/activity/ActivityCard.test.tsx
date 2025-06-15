@@ -303,7 +303,7 @@ describe('ActivityCard', () => {
       
       render(<ActivityCard activity={deadlineActivity} />);
       
-      expect(screen.getByText('deadline')).toBeInTheDocument();
+      expect(screen.getByText('締切')).toBeInTheDocument();
       // high priority should have red styling
       const card = screen.getByTestId('activity-card');
       expect(card).toHaveClass('border-l-red-400');

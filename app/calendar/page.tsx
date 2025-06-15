@@ -13,11 +13,14 @@ import { ActivityForm } from '@/components/activity/ActivityForm';
 import type { Activity } from '@/domain/activity/types';
 
 export default function CalendarPage() {
-  const { loadAllActivities, activities, isLoading, error } = useActivityStore();
+  const { loadAllActivities, activities, getFilteredActivities, isLoading, error } = useActivityStore();
   const { loadMembers } = useFamilyMemberStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
+  
+  // フィルタリングされたアクティビティを取得
+  const filteredActivities = getFilteredActivities();
   
   // 初期データロード
   useEffect(() => {
@@ -25,9 +28,9 @@ export default function CalendarPage() {
     loadAllActivities();
   }, [loadMembers, loadAllActivities]);
 
-  // 選択された日付のアクティビティを取得
+  // 選択された日付のアクティビティを取得（フィルタリング済み）
   const getActivitiesByDate = (date: string) => {
-    return activities.filter(activity => {
+    return filteredActivities.filter(activity => {
       if (activity.category === 'event') {
         return activity.startDate === date || activity.dueDate === date;
       } else {
@@ -125,7 +128,7 @@ export default function CalendarPage() {
               </div>
             ) : (
               <MonthView 
-                activities={activities} 
+                activities={filteredActivities} 
                 selectedDate={selectedDate}
                 onDateSelect={setSelectedDate}
               />

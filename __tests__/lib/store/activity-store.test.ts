@@ -41,10 +41,14 @@ describe('useActivityStore', () => {
     
     // Zustandストアをリセット
     const { result } = renderHook(() => useActivityStore());
-    result.current.activities.length = 0;
-    result.current.selectedActivity = null;
-    result.current.isLoading = false;
-    result.current.error = null;
+    act(() => {
+      // ストアを初期状態にリセット
+      result.current.activities = [];
+      result.current.selectedActivity = null;
+      result.current.isLoading = false;
+      result.current.error = null;
+      result.current.resetFilters();
+    });
     
     // テスト用のActivityデータ
     testActivity = {
@@ -60,8 +64,8 @@ describe('useActivityStore', () => {
         { id: 'check-2', title: 'チェック項目2', checked: true }
       ],
       isAllDay: true,
-      startDate: asDateString('2025-06-15'),
-      dueDate: asDateString('2025-06-20'),
+      startDate: asDateString('2025-06-15'), // 範囲外
+      dueDate: asDateString('2025-06-20'), // 範囲外
       createdAt: asDateString('2025-06-11'),
       updatedAt: asDateString('2025-06-11'),
       tags: ['重要', '家事']
@@ -447,6 +451,366 @@ describe('useActivityStore', () => {
       expect(pendingActivities[0].status).toBe('pending');
       expect(completedActivities).toHaveLength(1);
       expect(completedActivities[0].status).toBe('completed');
+    });
+  });
+
+  describe('filtering functionality', () => {
+    let activities: Activity[];
+
+    beforeEach(() => {
+      activities = [
+        testActivity, // task, pending, medium, member-1
+        {
+          ...testActivity,
+          id: asActivityId('event-activity'),
+          category: 'event' as const,
+          status: 'completed' as const,
+          priority: 'high' as const,
+          memberIds: [asMemberId('member-2')],
+          startDate: asDateString('2025-06-20'), // 範囲外の日付
+          dueDate: asDateString('2025-06-25') // 範囲外の日付
+        },
+        {
+          ...testActivity,
+          id: asActivityId('deadline-activity'),
+          category: 'deadline' as const,
+          status: 'in_progress' as const,
+          priority: 'low' as const,
+          memberIds: [asMemberId('member-1'), asMemberId('member-2')],
+          dueDate: asDateString('2025-06-10'),
+          startDate: asDateString('2025-06-01'),
+          endDate: asDateString('2025-06-10')
+        }
+      ];
+    });
+
+    describe('filter state management', () => {
+      it('should have correct initial filter state', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        expect(result.current.filters).toEqual({
+          categories: [],
+          statuses: [],
+          priorities: [],
+          memberIds: [],
+          dateRange: undefined,
+          showCompleted: true
+        });
+      });
+
+      it('should set category filter', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.setFilter('categories', ['task', 'event']);
+        });
+        
+        expect(result.current.filters.categories).toEqual(['task', 'event']);
+      });
+
+      it('should set status filter', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.setFilter('statuses', ['pending', 'completed']);
+        });
+        
+        expect(result.current.filters.statuses).toEqual(['pending', 'completed']);
+      });
+
+      it('should set priority filter', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.setFilter('priorities', ['high', 'medium']);
+        });
+        
+        expect(result.current.filters.priorities).toEqual(['high', 'medium']);
+      });
+
+      it('should set member filter', () => {
+        const memberIds = [asMemberId('member-1'), asMemberId('member-2')];
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.setFilter('memberIds', memberIds);
+        });
+        
+        expect(result.current.filters.memberIds).toEqual(memberIds);
+      });
+
+      it('should set date range filter', () => {
+        const dateRange = {
+          start: asDateString('2025-06-01'),
+          end: asDateString('2025-06-30')
+        };
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.setFilter('dateRange', dateRange);
+        });
+        
+        expect(result.current.filters.dateRange).toEqual(dateRange);
+      });
+
+      it('should toggle show completed', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.setFilter('showCompleted', false);
+        });
+        
+        expect(result.current.filters.showCompleted).toBe(false);
+
+        act(() => {
+          result.current.setFilter('showCompleted', true);
+        });
+        
+        expect(result.current.filters.showCompleted).toBe(true);
+      });
+
+      it('should clear single filter', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        // フィルターを設定
+        act(() => {
+          result.current.setFilter('categories', ['task', 'event']);
+          result.current.setFilter('statuses', ['pending']);
+        });
+        
+        // 単一フィルターをクリア
+        act(() => {
+          result.current.clearFilter('categories');
+        });
+        
+        expect(result.current.filters.categories).toEqual([]);
+        expect(result.current.filters.statuses).toEqual(['pending']); // 他のフィルターは保持
+      });
+
+      it('should reset all filters', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        // 複数フィルターを設定
+        act(() => {
+          result.current.setFilter('categories', ['task']);
+          result.current.setFilter('statuses', ['pending']);
+          result.current.setFilter('priorities', ['high']);
+          result.current.setFilter('showCompleted', false);
+        });
+        
+        // 全フィルターをリセット
+        act(() => {
+          result.current.resetFilters();
+        });
+        
+        expect(result.current.filters).toEqual({
+          categories: [],
+          statuses: [],
+          priorities: [],
+          memberIds: [],
+          dateRange: undefined,
+          showCompleted: true
+        });
+      });
+    });
+
+    describe('getFilteredActivities', () => {
+
+      it('should return all activities when no filters are applied', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(3);
+      });
+
+      it('should filter by category', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+          result.current.setFilter('categories', ['task']);
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(1);
+        expect(filtered[0].category).toBe('task');
+      });
+
+      it('should filter by multiple categories', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+          result.current.setFilter('categories', ['task', 'event']);
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(2);
+        expect(filtered.map(a => a.category)).toContain('task');
+        expect(filtered.map(a => a.category)).toContain('event');
+      });
+
+      it('should filter by status', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+          result.current.setFilter('statuses', ['pending']);
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(1);
+        expect(filtered[0].status).toBe('pending');
+      });
+
+      it('should filter by priority', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+          result.current.setFilter('priorities', ['high']);
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        
+        expect(filtered).toHaveLength(1);
+        expect(filtered[0].priority).toBe('high');
+      });
+
+      it('should filter by member ID', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+          result.current.setFilter('memberIds', [asMemberId('member-1')]);
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(2); // testActivity と deadline-activity
+        expect(filtered.every(a => a.memberIds.includes(asMemberId('member-1')))).toBe(true);
+      });
+
+      it('should hide completed activities when showCompleted is false', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+          result.current.setFilter('showCompleted', false);
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(2);
+        expect(filtered.every(a => a.status !== 'completed')).toBe(true);
+      });
+
+      it('should filter by date range', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+          result.current.setFilter('dateRange', {
+            start: asDateString('2025-06-01'),
+            end: asDateString('2025-06-12')
+          });
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(1); // deadline-activityのみが範囲内に含まれる
+      });
+
+      it('should apply multiple filters simultaneously', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+          result.current.setFilter('categories', ['task', 'deadline']);
+          result.current.setFilter('priorities', ['medium', 'low']);
+          result.current.setFilter('memberIds', [asMemberId('member-1')]);
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(2); // testActivity と deadline-activity
+      });
+
+      it('should return empty array when no activities match filters', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = activities;
+          result.current.setFilter('categories', ['meeting']); // 存在しないカテゴリ
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(0);
+      });
+    });
+
+    describe('date range filtering logic', () => {
+      it('should include activities that start within date range', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = [
+            {
+              ...testActivity,
+              startDate: asDateString('2025-06-05'),
+              endDate: asDateString('2025-06-10')
+            }
+          ];
+          result.current.setFilter('dateRange', {
+            start: asDateString('2025-06-01'),
+            end: asDateString('2025-06-07')
+          });
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(1);
+      });
+
+      it('should include activities that end within date range', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = [
+            {
+              ...testActivity,
+              startDate: asDateString('2025-05-25'),
+              endDate: asDateString('2025-06-05')
+            }
+          ];
+          result.current.setFilter('dateRange', {
+            start: asDateString('2025-06-01'),
+            end: asDateString('2025-06-10')
+          });
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(1);
+      });
+
+      it('should include activities with due date within range', () => {
+        const { result } = renderHook(() => useActivityStore());
+        
+        act(() => {
+          result.current.activities = [
+            {
+              ...testActivity,
+              dueDate: asDateString('2025-06-05')
+            }
+          ];
+          result.current.setFilter('dateRange', {
+            start: asDateString('2025-06-01'),
+            end: asDateString('2025-06-10')
+          });
+        });
+        
+        const filtered = result.current.getFilteredActivities();
+        expect(filtered).toHaveLength(1);
+      });
     });
   });
 });

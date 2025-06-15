@@ -10,17 +10,18 @@ import { TaskFilter } from './components/TaskFilter';
 import type { Activity } from '@/domain/activity/types';
 
 export default function TasksPage() {
-  const { loadAllActivities, activities, isLoading, error } = useActivityStore();
+  const { loadAllActivities, activities, getFilteredActivities, isLoading, error } = useActivityStore();
   const { loadMembers } = useFamilyMemberStore();
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
   
-  // Taskカテゴリーのアクティビティをフィルター
+  // フィルタリングされたアクティビティを取得し、その中からタスクのみを抽出
+  const filteredActivities = getFilteredActivities();
   const taskActivities = useMemo(() => {
-    return activities.filter(activity => 
-      activity.category === 'task' || activity.category === 'deadline'
+    return filteredActivities.filter(activity => 
+      activity.category === 'task' || activity.category === 'deadline' || activity.category === 'reminder'
     );
-  }, [activities]);
+  }, [filteredActivities]);
   
   // 期限切れタスク
   const overdueTasks = useMemo(() => {
