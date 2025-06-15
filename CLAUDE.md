@@ -73,6 +73,15 @@ npm test -- --coverage
 await db.delete()
 ```
 
+### Path Aliases
+
+プロジェクトでは `@/` エイリアスを使用してルートディレクトリからの絶対パスでインポート:
+
+```typescript
+import { Activity } from '@/domain/activity/types';
+import { useActivityStore } from '@/lib/store/activity-store';
+```
+
 ## アーキテクチャ概要
 
 Clean Architecture + 関数型ドメインモデリング + TDDアプローチを採用。
@@ -128,6 +137,8 @@ UI層 → Store層 → Application層 → Domain層 → Infrastructure層
 - 繰り返し予定機能
 - PWA最適化（Service Worker）
 
+**注記**: PWA基盤（next-pwa）は導入済み、manifest.jsonも設定済み
+
 ## Critical Notes
 
 1. **CalendarEventとTaskは削除済み**: すべて`Activity`エンティティを使用
@@ -135,6 +146,7 @@ UI層 → Store層 → Application層 → Domain層 → Infrastructure層
 3. **Result型でエラーハンドリング**: throw/catch ではなく Result<T, E> を使用
 4. **テストファースト**: 実装前に必ずテストを書く
 5. **日本語UI**: エラーメッセージ、ラベル等はすべて日本語
+6. **テスト環境**: fake-indexeddbでIndexedDBをモック、test-setup.tsで設定済み
 
 ## よくある問題と解決法
 
