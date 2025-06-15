@@ -13,6 +13,14 @@ Sharendar は家族やグループで予定・タスク・持ち物をスムー�
 - **PWA対応**: オフラインファースト、IndexedDBによるローカルストレージ
 - **型安全**: TypeScript strict mode + Brand型による実行時エラー防止
 
+## 関連ドキュメント
+
+詳細な技術情報は以下の専門ドキュメントを参照してください：
+- [アーキテクチャ詳細](/docs/architecture.md) - Clean Architecture + 関数型設計の詳細
+- [ドメインモデル](/docs/domain-models.md) - 統一Activityドメインの詳細仕様
+- [テスト戦略](/docs/testing.md) - TDD実践ガイド
+- [API設計パターン](/docs/api-patterns.md) - Repository, UseCase, Error handling patterns
+
 ## Key Commands
 
 ### Development
@@ -65,299 +73,45 @@ npm test -- --coverage
 await db.delete()
 ```
 
-## Architecture
+## アーキテクチャ概要
 
-### 設計思想
-Clean Architecture + 関数型ドメインモデリング + TDDアプローチ：
-- **純粋関数**：副作用を分離し、ビジネスロジックを純粋に保つ
-- **イミュータブル**：すべてのデータ構造を不変に
-- **型安全**：Brand型で実行時エラーを防ぐ
-- **エラーハンドリング**：Result型（neverthrow）でエラーを値として扱う
-- **依存性注入**：InversifyJSによるDIコンテナ
-- **オフラインファースト**：IndexedDB (Dexie.js)によるローカルストレージ
-- **TDD駆動開発**：テストファースト開発により高品質を保証
-
-### 技術スタック
-
-```json
-{
-  "framework": "Next.js 14 (App Router)",
-  "language": "TypeScript (strict mode)",
-  "styling": "Tailwind CSS",
-  "database": "IndexedDB (Dexie.js)",
-  "state": "Zustand with subscribeWithSelector",
-  "di": "InversifyJS + reflect-metadata",
-  "testing": "Vitest + React Testing Library + fake-indexeddb",
-  "errors": "neverthrow (Result型)",
-  "icons": "Lucide React",
-  "dates": "date-fns"
-}
-```
+Clean Architecture + 関数型ドメインモデリング + TDDアプローチを採用。
+詳細な設計思想と技術スタックは [アーキテクチャ詳細](/docs/architecture.md) を参照。
 
 ### 統一Activityドメインモデル
 
-CalendarEventとTaskを統一した`Activity`エンティティに完全移行済みです。
+CalendarEventとTaskを統一した`Activity`エンティティを採用。
+詳細な型定義と仕様は [ドメインモデル](/docs/domain-models.md) を参照。
 
-```typescript
-// 統一Activityドメイン（/domain/activity/types.ts）
-type Activity = Readonly<{
-  id: ActivityId;
-  title: ActivityTitle;
-  description?: string;
-  
-  // 柔軟な時間モデル
-  startDate?: DateString;
-  startTime?: TimeString;
-  endDate?: DateString;
-  endTime?: TimeString;
-  dueDate?: DateString;
-  isAllDay: boolean;
-  
-  // 分類・状態
-  category: ActivityCategory; // 7種類: 'event' | 'task' | 'appointment' | 'deadline' | 'meeting' | 'milestone' | 'reminder'
-  status: ActivityStatus;     // 5種類: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'postponed'
-  priority: ActivityPriority; // 'high' | 'medium' | 'low'
-  
-  // タスク機能
-  checklist: ReadonlyArray<ChecklistItem>;
-  completedAt?: DateString;
-  
-  // その他
-  memberIds: ReadonlyArray<MemberId>;
-  location?: string;
-  tags: ReadonlyArray<string>;
-  createdAt: DateString;
-  updatedAt: DateString;
-  recurrence?: RecurrencePattern;
-}>;
-```
-
-### レイヤード・アーキテクチャ
+### レイヤード・アーキテクチャ概要
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    UI層 (app/, components/)              │
-│  - Next.js App Router pages                             │
-│  - React Components (ActivityCard, ActivityForm)         │
-└─────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────┐
-│                 Store層 (lib/store/)                     │
-│  - Zustand stores (ActivityStore, FamilyMemberStore)    │
-│  - DIコンテナ初期化                                      │
-└─────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────┐
-│             Application層 (application/)                 │
-│  - Use Cases (ActivityUseCase, FamilyMemberUseCase)     │
-│  - Commands/Queries (CQRS pattern)                      │
-│  - Domain serviceの調整                                  │
-└─────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────┐
-│                Domain層 (domain/)                        │
-│  - 純粋なビジネスロジック                                │
-│  - 型定義 (Activity, FamilyMember)                      │
-│  - Domain operations (純粋関数)                         │
-│  - Validations                                          │
-│  - Repository interfaces                                │
-└─────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────┐
-│            Infrastructure層 (infrastructure/)            │
-│  - Repository実装 (DexieActivityRepository)             │
-│  - DIコンテナ設定 (bindings.ts)                         │
-│  - 外部サービス連携                                      │
-└─────────────────────────────────────────────────────────┘
+UI層 → Store層 → Application層 → Domain層 → Infrastructure層
 ```
 
-### 重要なディレクトリ構造
+詳細な構造とデータフローは [アーキテクチャ詳細](/docs/architecture.md) を参照。
 
-```
-/domain/activity/         # 統一Activityドメイン
-  types.ts               # Activity型定義、カテゴリ、ステータス等
-  operations.ts          # createActivity, updateActivity等の純粋関数
-  validations.ts         # バリデーションロジック
-  repository.ts          # ActivityRepositoryインターフェース
 
-/application/activity/    # Activityアプリケーション層
-  use-cases.ts          # ActivityUseCase (CQRS)
-  commands.ts           # CreateActivityCommand等
-  queries.ts            # GetActivityByIdQuery等
+## 最新機能
 
-/infrastructure/
-  /db/
-    activity-repository.ts  # Dexie実装
-    schema.ts              # DBスキーマ定義
-  /di/
-    bindings.ts            # DIコンテナ設定
+### フィルタリング機能（2025年6月実装） ✅
+- カテゴリ、ステータス、優先度、メンバー、日付範囲による絞り込み
+- ActivityStore統合、リアルタイムフィルタリング
+- カレンダー/タスクページ両方で利用可能
 
-/lib/store/
-  activity-store.ts        # Zustand Activityストア
-  container.ts             # DIコンテナ初期化
+## 重要な設計パターン
 
-/components/activity/      # Activity UIコンポーネント
-  ActivityCard.tsx         # Activity表示カード
-  ActivityForm.tsx         # Activity作成/編集フォーム
+### 型安全性とエラーハンドリング
+- **Brand Types**: 実行時型エラーを防ぐ
+- **Result型**: `neverthrow`によるエラーの値化
+- **TDD**: テストファースト開発
 
-/app/calendar/components/  # カレンダー専用コンポーネント
-  CalendarFilter.tsx       # カレンダーフィルター
-  MonthView.tsx           # 月表示
+詳細なパターンと実装方法は以下を参照：
+- [API設計パターン](/docs/api-patterns.md) - Repository, UseCase, Error handling
+- [テスト戦略](/docs/testing.md) - TDD実践ガイド
+- [ドメインモデル](/docs/domain-models.md) - Brand型とバリデーション
 
-/app/tasks/components/     # タスク専用コンポーネント
-  TaskFilter.tsx          # タスクフィルター
-```
-
-### DIコンテナの使用
-
-```typescript
-// DIコンテナでの依存性解決
-const container = getInitializedContainer();
-const activityUseCase = container.get<ActivityUseCase>('ActivityUseCase');
-
-// ストアでの使用例
-const result = await activityUseCase.createActivity(command);
-if (result.isErr()) {
-  set({ error: result.error.message });
-}
-```
-
-### データフロー
-
-```
-UI Component (onClick) 
-    ↓
-Zustand Store (createActivity)
-    ↓
-DI Container (get ActivityUseCase)
-    ↓
-Application UseCase (validate & coordinate)
-    ↓
-Domain Operations (pure functions)
-    ↓
-Infrastructure Repository (IndexedDB save)
-    ↓
-Store State Update
-    ↓
-UI Re-render
-```
-
-## Recent Features
-
-### フィルタリング機能（2025年6月実装）
-
-ActivityStoreに統合されたフィルタリング機能：
-
-```typescript
-// フィルター設定
-useActivityStore().setFilter('categories', ['task', 'event']);
-useActivityStore().setFilter('statuses', ['pending']);
-useActivityStore().setFilter('memberIds', ['member-1']);
-
-// フィルター済みデータ取得
-const filtered = useActivityStore().getFilteredActivities();
-
-// フィルタークリア
-useActivityStore().resetFilters();
-```
-
-**利用可能なフィルター**:
-- カテゴリ（複数選択可）
-- ステータス（複数選択可）
-- 優先度（複数選択可）
-- メンバーID（複数選択可）
-- 日付範囲（startDate, endDate）
-- 完了済み表示切り替え（showCompleted）
-
-## Important Patterns and Conventions
-
-### Brand Types (型安全性)
-
-```typescript
-// すべてのIDはBrand型で定義（domain/shared/branded-types.ts）
-type ActivityId = string & { readonly brand: unique symbol };
-type MemberId = string & { readonly brand: unique symbol };
-
-// 使用時は必ずas関数を通す
-const id = asActivityId('activity-123');
-```
-
-### Result型によるエラーハンドリング
-
-```typescript
-// neverthrowのResult型を使用
-import { Result, ok, err } from 'neverthrow';
-
-// すべてのバリデーションはResult型を返す
-const validateTitle = (title: string): Result<ActivityTitle, ActivityError> => {
-  if (!title.trim()) {
-    return err(new ActivityError('VALIDATION_ERROR', 'タイトルは必須です'));
-  }
-  return ok(asActivityTitle(title));
-};
-```
-
-### テスト駆動開発 (TDD)
-
-1. **テストファースト**: 実装前にテストを書く
-2. **テストファイル配置**: `__tests__/`ディレクトリに同じ構造で配置
-3. **モック**: Vitestの`vi.mock()`を使用
-4. **React Testing Library**: UIコンポーネントのテスト
-
-```typescript
-// テストの例（__tests__/domain/activity/types.test.ts）
-describe('Activity Domain', () => {
-  it('should create a valid activity', () => {
-    const result = createActivity('タイトル', 'task', 'medium');
-    expect(result).toBeDefined();
-    expect(result.title).toBe('タイトル');
-  });
-});
-```
-
-### Zustandストアパターン
-
-```typescript
-// ストアは必ずinterfaceを定義
-interface ActivityStore {
-  // State
-  activities: Activity[];
-  isLoading: boolean;
-  error: string | null;
-  
-  // Actions (async含む)
-  loadAllActivities: () => Promise<void>;
-  createActivity: (command: CreateActivityCommand) => Promise<void>;
-}
-
-// subscribeWithSelectorミドルウェアを使用
-export const useActivityStore = create<ActivityStore>()(
-  subscribeWithSelector((set, get) => ({
-    // implementation
-  }))
-);
-```
-
-### DIコンテナ注意点
-
-1. **シンボルの定義**: `TYPES`オブジェクトまたは文字列リテラル
-2. **スコープ**: Repository は`inSingletonScope()`、UseCase は`inTransientScope()`
-3. **初期化**: `getInitializedContainer()`で自動初期化
-
-### データベーススキーマ変更
-
-Dexieでスキーマを変更する場合：
-
-```typescript
-// infrastructure/db/schema.ts
-db.version(3).stores({
-  activities: '++id, category, status, [category+status], createdAt, updatedAt'
-});
-```
-
-バージョンを上げて、インデックスを追加/変更。
-
-## Current Implementation Status
+## 実装状況
 
 ### ✅ 完了済み
 - 統一Activityドメインモデル実装
@@ -382,14 +136,14 @@ db.version(3).stores({
 4. **テストファースト**: 実装前に必ずテストを書く
 5. **日本語UI**: エラーメッセージ、ラベル等はすべて日本語
 
-## Common Issues & Solutions
+## よくある問題と解決法
 
 ### テストでのBrand型エラー
 ```typescript
-// ❌ 間違い
+// ❌ 間違い: 直接文字列を使用
 const activity = { id: 'test-1', title: 'テスト' };
 
-// ✅ 正しい
+// ✅ 正しい: as関数を使用
 const activity = { 
   id: asActivityId('test-1'), 
   title: asActivityTitle('テスト') 
@@ -398,17 +152,10 @@ const activity = {
 
 ### DIコンテナの初期化忘れ
 ```typescript
-// ❌ 間違い
+// ❌ 間違い: 直接インスタンス化
 const activityUseCase = new ActivityUseCase();
 
-// ✅ 正しい
+// ✅ 正しい: DIコンテナ経由
 const container = getInitializedContainer();
 const activityUseCase = container.get<ActivityUseCase>('ActivityUseCase');
-```
-
-### フィルター適用時の注意
-```typescript
-// フィルターは配列で指定
-store.setFilter('categories', ['task', 'event']); // ✅
-store.setFilter('categories', 'task'); // ❌
 ```
