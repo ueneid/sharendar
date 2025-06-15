@@ -1,366 +1,414 @@
-# アーキテクチャ設計書
+# アーキテクチャ詳細
 
-## 概要
+このドキュメントでは、SharendarのClean Architecture + 関数型ドメインモデリング設計について詳しく説明します。
 
-Sharendarは関数型ドメインモデリングとクリーンアーキテクチャを採用したWebアプリケーションです。
-依存性逆転原則(DIP)と依存性注入(DI)により、高い保守性とテスタビリティを実現しています。
+## 設計思想
 
-## アーキテクチャ原則
+### 核となる原則
 
-### クリーンアーキテクチャの実装
+1. **純粋関数**: 副作用を分離し、ビジネスロジックを純粋に保つ
+2. **イミュータブル**: すべてのデータ構造を不変に
+3. **型安全**: Brand型で実行時エラーを防ぐ
+4. **エラーハンドリング**: Result型（neverthrow）でエラーを値として扱う
+5. **依存性注入**: InversifyJSによるDIコンテナ
+6. **オフラインファースト**: IndexedDB (Dexie.js)によるローカルストレージ
+7. **TDD駆動開発**: テストファースト開発により高品質を保証
+
+### 技術スタック
+
+```json
+{
+  "framework": "Next.js 14 (App Router)",
+  "language": "TypeScript (strict mode)",
+  "styling": "Tailwind CSS",
+  "database": "IndexedDB (Dexie.js)",
+  "state": "Zustand with subscribeWithSelector",
+  "di": "InversifyJS + reflect-metadata",
+  "testing": "Vitest + React Testing Library + fake-indexeddb",
+  "errors": "neverthrow (Result型)",
+  "icons": "Lucide React",
+  "dates": "date-fns"
+}
+```
+
+## レイヤード・アーキテクチャ
+
+### 全体構造
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    UI層 (Next.js)                       │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │           Application層 (UseCase + DI)          │   │
-│  │  ┌─────────────────────────────────────────┐   │   │
-│  │  │           Domain層 (純粋ロジック)         │   │   │
-│  │  │                                         │   │   │
-│  │  └─────────────────────────────────────────┘   │   │
-│  └─────────────────────────────────────────────────┘   │
+│                    UI層 (app/, components/)              │
+│  - Next.js App Router pages                             │
+│  - React Components (ActivityCard, ActivityForm)         │
 └─────────────────────────────────────────────────────────┘
-            ↑ 依存関係は内側へのみ向かう
+                              ↓
 ┌─────────────────────────────────────────────────────────┐
-│              Infrastructure層 (外部システム)              │
+│                 Store層 (lib/store/)                     │
+│  - Zustand stores (ActivityStore, FamilyMemberStore)    │
+│  - DIコンテナ初期化                                      │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│             Application層 (application/)                 │
+│  - Use Cases (ActivityUseCase, FamilyMemberUseCase)     │
+│  - Commands/Queries (CQRS pattern)                      │
+│  - Domain serviceの調整                                  │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│                Domain層 (domain/)                        │
+│  - 純粋なビジネスロジック                                │
+│  - 型定義 (Activity, FamilyMember)                      │
+│  - Domain operations (純粋関数)                         │
+│  - Validations                                          │
+│  - Repository interfaces                                │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│            Infrastructure層 (infrastructure/)            │
+│  - Repository実装 (DexieActivityRepository)             │
+│  - DIコンテナ設定 (bindings.ts)                         │
+│  - 外部サービス連携                                      │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 依存性の方向
+### データフロー
 
-```typescript
-// ✅ 正しい依存関係
-UI層 → Application層 → Domain層 ← Infrastructure層
-//                        ↑
-//                  Interface定義のみ
-//               (実装はInfrastructure層)
+```
+UI Component (onClick) 
+    ↓
+Zustand Store (createActivity)
+    ↓
+DI Container (get ActivityUseCase)
+    ↓
+Application UseCase (validate & coordinate)
+    ↓
+Domain Operations (pure functions)
+    ↓
+Infrastructure Repository (IndexedDB save)
+    ↓
+Store State Update
+    ↓
+UI Re-render
 ```
 
-## 層別設計詳細
+## ディレクトリ構造
 
-### Domain層（最内層）
+### 詳細構造
 
-**責任**: 純粋なビジネスロジックとルール
-
-```typescript
-// domain/family/types.ts - Brand型とValue Objects
-export type MemberId = string & { readonly brand: unique symbol };
-export type MemberName = string & { readonly brand: unique symbol };
-
-export type FamilyMember = Readonly<{
-  id: MemberId;
-  name: MemberName;
-  avatar?: string;
-  color: Color;
-}>;
-
-// domain/family/repository.ts - Interface定義（DI非依存）
-export interface IFamilyMemberRepository {
-  save(member: FamilyMember): Promise<Result<void, FamilyMemberRepositoryError>>;
-  findById(id: MemberId): Promise<Result<FamilyMember | null, FamilyMemberRepositoryError>>;
-  // ... 他のメソッド
-}
-
-// domain/family/operations.ts - 純粋関数
-export const createFamilyMember = (
-  name: MemberName,
-  options?: CreateMemberOptions
-): FamilyMember => {
-  // 副作用のない純粋な操作
-};
+```
+/src/
+├── app/                        # Next.js App Router
+│   ├── calendar/
+│   │   ├── page.tsx           # カレンダーページ
+│   │   └── components/        # カレンダー専用コンポーネント
+│   │       ├── CalendarFilter.tsx
+│   │       └── MonthView.tsx
+│   ├── tasks/
+│   │   ├── page.tsx           # タスクページ
+│   │   └── components/        # タスク専用コンポーネント
+│   │       └── TaskFilter.tsx
+│   └── layout.tsx             # 共通レイアウト
+│
+├── components/                 # 共通UIコンポーネント
+│   ├── activity/              # Activity関連コンポーネント
+│   │   ├── ActivityCard.tsx   # Activity表示カード
+│   │   └── ActivityForm.tsx   # Activity作成/編集フォーム
+│   └── shared/                # 汎用コンポーネント
+│
+├── domain/                    # ドメイン層
+│   ├── activity/              # 統一Activityドメイン
+│   │   ├── types.ts          # Activity型定義、カテゴリ、ステータス等
+│   │   ├── operations.ts     # createActivity, updateActivity等の純粋関数
+│   │   ├── validations.ts    # バリデーションロジック
+│   │   └── repository.ts     # ActivityRepositoryインターフェース
+│   ├── family-member/         # 家族メンバードメイン
+│   └── shared/                # 共通ドメイン要素
+│       └── branded-types.ts   # Brand型定義
+│
+├── application/               # アプリケーション層
+│   ├── activity/              # Activity業務ロジック
+│   │   ├── use-cases.ts      # ActivityUseCase (CQRS)
+│   │   ├── commands.ts       # CreateActivityCommand等
+│   │   └── queries.ts        # GetActivityByIdQuery等
+│   └── family-member/         # 家族メンバー業務ロジック
+│
+├── infrastructure/            # インフラストラクチャ層
+│   ├── db/                    # データベース関連
+│   │   ├── activity-repository.ts  # Dexie実装
+│   │   └── schema.ts         # DBスキーマ定義
+│   └── di/                    # 依存性注入
+│       └── bindings.ts       # DIコンテナ設定
+│
+└── lib/                       # ライブラリ・ユーティリティ
+    ├── store/                 # 状態管理
+    │   ├── activity-store.ts  # Zustand Activityストア
+    │   ├── family-member-store.ts
+    │   └── container.ts       # DIコンテナ初期化
+    └── utils/                 # ユーティリティ関数
 ```
 
-**特徴**:
-- 他の層に依存しない
-- DIフレームワークに依存しない
-- 純粋関数のみで構成
-- Interface定義により外部依存を抽象化
+## DIコンテナ設計
 
-### Application層（ユースケース層）
-
-**責任**: ビジネスユースケースの実装とDI設定
+### 設定パターン
 
 ```typescript
-// application/shared/types.ts - DIシンボル管理
-export const TYPES = {
-  IFamilyMemberRepository: Symbol.for('IFamilyMemberRepository'),
-  FamilyMemberUseCase: Symbol.for('FamilyMemberUseCase'),
-} as const;
+// infrastructure/di/bindings.ts
+import { Container } from 'inversify';
+import { ActivityRepository } from '../../domain/activity/repository';
+import { DexieActivityRepository } from '../db/activity-repository';
+import { ActivityUseCase } from '../../application/activity/use-cases';
 
-// application/family/use-cases.ts - UseCase実装
-@injectable()
-export class FamilyMemberUseCase {
-  constructor(
-    @inject(TYPES.IFamilyMemberRepository)
-    private readonly repository: IFamilyMemberRepository
-  ) {}
-
-  async createMember(name: string): Promise<Result<FamilyMember, FamilyUseCaseError>> {
-    // 1. バリデーション
-    // 2. ドメイン操作呼び出し
-    // 3. Repository呼び出し
-    // 4. Result型でエラーハンドリング
-  }
-}
-
-// application/family/index.ts - ファクトリ関数
-export const getFamilyUseCase = (): FamilyMemberUseCase => {
-  ensureContainerInitialized();
-  return container.get<FamilyMemberUseCase>(TYPES.FamilyMemberUseCase);
-};
-```
-
-**特徴**:
-- Domain層のInterfaceのみに依存
-- Infrastructure層に直接依存しない
-- DIコンテナによる依存性解決
-- CQRS（Command Query Responsibility Segregation）パターン
-
-### Infrastructure層（最外層）
-
-**責任**: 外部システムとの接続と具体的実装
-
-```typescript
-// infrastructure/db/repository.ts - Repository実装
-@injectable()
-export class InjectableFamilyMemberRepository implements IFamilyMemberRepository {
-  async save(member: FamilyMember): Promise<Result<void, FamilyMemberRepositoryError>> {
-    try {
-      // IndexedDB具体的操作
-      await db.familyMembers.put(this.toDTO(member));
-      return ok(undefined);
-    } catch (error) {
-      return err({ type: 'DatabaseError', message: error.message });
-    }
-  }
-}
-
-// infrastructure/di/bindings.ts - DI設定
-export const configureContainer = (container: Container): void => {
-  container.bind<IFamilyMemberRepository>(TYPES.IFamilyMemberRepository)
-           .to(InjectableFamilyMemberRepository)
-           .inSingletonScope();
+export const setupContainer = (): Container => {
+  const container = new Container();
   
-  container.bind<FamilyMemberUseCase>(TYPES.FamilyMemberUseCase)
-           .to(FamilyMemberUseCase)
-           .inTransientScope();
+  // Repository層 - Singleton
+  container.bind<ActivityRepository>('ActivityRepository')
+    .to(DexieActivityRepository)
+    .inSingletonScope();
+  
+  // UseCase層 - Transient
+  container.bind<ActivityUseCase>('ActivityUseCase')
+    .to(ActivityUseCase)
+    .inTransientScope();
+  
+  return container;
 };
 ```
 
-**特徴**:
-- Domain層のInterfaceを実装
-- 外部システム（IndexedDB、API等）との接続
-- DIバインディング設定
-- DTO変換処理
-
-### UI層（Next.js App Router）
-
-**責任**: ユーザーインターフェースとプレゼンテーション
+### 使用パターン
 
 ```typescript
-// app/settings/page.tsx
-export default function SettingsPage() {
-  const useCase = getFamilyUseCase(); // DIコンテナから取得
+// lib/store/container.ts
+let _container: Container | null = null;
+
+export const getInitializedContainer = (): Container => {
+  if (!_container) {
+    _container = setupContainer();
+  }
+  return _container;
+};
+
+// Store内での使用
+const container = getInitializedContainer();
+const activityUseCase = container.get<ActivityUseCase>('ActivityUseCase');
+```
+
+## 状態管理設計
+
+### Zustandパターン
+
+```typescript
+// lib/store/activity-store.ts
+interface ActivityStore {
+  // State
+  activities: Activity[];
+  isLoading: boolean;
+  error: string | null;
+  filters: ActivityFilters;
   
-  const handleCreateMember = async (name: string) => {
-    const result = await useCase.createMember(name);
+  // Actions
+  loadAllActivities: () => Promise<void>;
+  createActivity: (command: CreateActivityCommand) => Promise<void>;
+  updateActivity: (id: ActivityId, command: UpdateActivityCommand) => Promise<void>;
+  deleteActivity: (id: ActivityId) => Promise<void>;
+  
+  // Filtering
+  setFilter: <K extends keyof ActivityFilters>(key: K, value: ActivityFilters[K]) => void;
+  clearFilter: (key: keyof ActivityFilters) => void;
+  resetFilters: () => void;
+  getFilteredActivities: () => Activity[];
+}
+
+export const useActivityStore = create<ActivityStore>()(
+  subscribeWithSelector((set, get) => ({
+    // State初期値
+    activities: [],
+    isLoading: false,
+    error: null,
+    filters: defaultFilters,
     
-    if (result.isErr()) {
-      // エラーハンドリング
-      setError(result.error.message);
-    } else {
-      // 成功処理
-      setMembers(prev => [...prev, result.value]);
-    }
-  };
-
-  return (
-    // JSX実装
-  );
-}
+    // Actions実装
+    loadAllActivities: async () => {
+      set({ isLoading: true, error: null });
+      
+      const container = getInitializedContainer();
+      const useCase = container.get<ActivityUseCase>('ActivityUseCase');
+      
+      const result = await useCase.getAllActivities();
+      
+      if (result.isOk()) {
+        set({ activities: result.value, isLoading: false });
+      } else {
+        set({ error: result.error.message, isLoading: false });
+      }
+    },
+    
+    // その他のアクション...
+  }))
+);
 ```
 
-## 依存性注入（DI）の実装
+## エラーハンドリング設計
 
-### DIシンボルの管理場所
-
-**Application層で管理する理由**:
-
-1. **適切な責任分離**
-   - Domain層: 純粋なビジネスロジック
-   - Application層: ユースケースとDI設定
-   - Infrastructure層: 具体的実装
-
-2. **Domain層の純粋性保持**
-   - DIフレームワークに依存しない
-   - 外部ライブラリからの独立性
+### Result型パターン
 
 ```typescript
-// ✅ 正しい配置
-/application/shared/types.ts  # DIシンボル定義
-/domain/family/repository.ts  # Interface定義のみ（DI非依存）
-```
-
-### DIライフサイクル
-
-1. **アプリケーション起動時**
-   ```typescript
-   // app/layout.tsx
-   import { initializeContainer } from '@/infrastructure/di/container';
-   
-   initializeContainer(); // 一度だけ実行
-   ```
-
-2. **本番環境での使用**
-   ```typescript
-   const useCase = getFamilyUseCase(); // DIコンテナから取得
-   ```
-
-3. **テスト環境での使用**
-   ```typescript
-   const mockRepository = createMockRepository();
-   const useCase = createFamilyUseCase(mockRepository); // 直接注入
-   ```
-
-## エラーハンドリング戦略
-
-### Result型による関数型エラーハンドリング
-
-```typescript
+// neverthrowを使用したエラーハンドリング
 import { Result, ok, err } from 'neverthrow';
 
-// ✅ 例外を投げない、Resultを返す
-async function createMember(name: string): Promise<Result<FamilyMember, FamilyUseCaseError>> {
-  const nameResult = validateMemberName(name);
-  if (nameResult.isErr()) {
-    return err(nameResult.error);
+// ドメイン操作
+export const createActivity = (
+  title: string,
+  category: ActivityCategory,
+  priority: ActivityPriority
+): Result<Activity, ActivityError> => {
+  // バリデーション
+  const titleResult = validateTitle(title);
+  if (titleResult.isErr()) {
+    return err(titleResult.error);
   }
   
-  const saveResult = await repository.save(member);
-  if (saveResult.isErr()) {
-    return err(saveResult.error);
-  }
+  // Activity作成
+  const activity: Activity = {
+    id: asActivityId(generateId()),
+    title: titleResult.value,
+    category,
+    priority,
+    status: 'pending' as ActivityStatus,
+    isAllDay: false,
+    checklist: [],
+    memberIds: [],
+    tags: [],
+    createdAt: asDateString(new Date().toISOString()),
+    updatedAt: asDateString(new Date().toISOString()),
+  };
   
-  return ok(member);
-}
+  return ok(activity);
+};
 
-// 使用側
-const result = await useCase.createMember('太郎');
-if (result.isErr()) {
-  console.error(result.error);
-} else {
-  console.log('成功:', result.value);
-}
-```
-
-## テスト戦略
-
-### レイヤー別テスト方針
-
-1. **Domain層**: ユニットテスト（純粋関数）
-2. **Application層**: 統合テスト（Repository含む）
-3. **Infrastructure層**: 統合テスト（実際のDB）
-4. **UI層**: コンポーネントテスト
-
-### DIによるテスタビリティ
-
-```typescript
-// テストでのモック注入例
-describe('FamilyMemberUseCase', () => {
-  it('should create member successfully', async () => {
-    const mockRepository = {
-      save: vi.fn().mockResolvedValue(ok(undefined)),
-      findById: vi.fn().mockResolvedValue(ok(null)),
-      // ...
-    };
-    
-    const useCase = createFamilyUseCase(mockRepository);
-    const result = await useCase.createMember('太郎');
-    
-    expect(result.isOk()).toBe(true);
-    expect(mockRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({ name: '太郎' })
+// UseCase層での使用
+export class ActivityUseCase {
+  async createActivity(command: CreateActivityCommand): Promise<Result<Activity, ActivityError>> {
+    // ドメイン操作実行
+    const activityResult = createActivity(
+      command.title,
+      command.category,
+      command.priority
     );
-  });
-});
+    
+    if (activityResult.isErr()) {
+      return err(activityResult.error);
+    }
+    
+    // Repository保存
+    const saveResult = await this.repository.save(activityResult.value);
+    return saveResult;
+  }
+}
 ```
 
-## 実装済み機能とアーキテクチャ検証
+## 型安全性設計
 
-### ✅ Task 2: 家族メンバー管理（完了）
-
-**アーキテクチャ品質検証結果**:
-
-1. **依存性逆転原則(DIP)**: ✅ 完全実装
-   - Application層がInfrastructure層に直接依存しない
-   - Domain Interfaceのみに依存
-
-2. **依存性注入(DI)**: ✅ InversifyJSで実装
-   - 型安全なDI実現
-   - テスト時のモック注入対応
-
-3. **責任分離**: ✅ 適切な層分割
-   - Domain: ビジネスロジック
-   - Application: ユースケース
-   - Infrastructure: 具体実装
-
-4. **テスタビリティ**: ✅ 43テスト実装、全パス
-   - 統合テスト完備
-   - モック注入テスト
-
-**アーキテクチャ成熟度**: Production Ready
-
-### 🟡 次期実装: Calendar & Task管理
-
-同じアーキテクチャパターンを適用:
-- Domain Interface定義
-- Application UseCase実装
-- Infrastructure Repository実装
-- 完全なDI統合
-
-## パフォーマンス考慮事項
-
-### DIコンテナの最適化
-
-1. **Singleton vs Transient**
-   - Repository: Singleton（状態を持たない）
-   - UseCase: Transient（状態を持つ可能性）
-
-2. **遅延初期化**
-   - 必要時にのみDI解決
-   - アプリケーション起動時間の最適化
-
-### メモリ効率
-
-1. **イミュータブルデータ構造**
-   - 意図しない変更を防ぐ
-   - 予測可能な動作
-
-2. **Result型による早期リターン**
-   - 例外処理のオーバーヘッド削減
-   - エラー時の処理効率化
-
-## 将来の拡張性
-
-### 新ドメイン追加の手順
-
-1. Domain層でInterface定義
-2. Application層でUseCase実装
-3. Infrastructure層で具体実装
-4. DIバインディング追加
-5. UI層での利用
-
-### 外部システム統合
+### Brand型パターン
 
 ```typescript
-// 例: Supabase統合時
-interface ISupabaseRepository extends IFamilyMemberRepository {
-  syncWithCloud(): Promise<Result<void, SyncError>>;
-}
+// domain/shared/branded-types.ts
+export type ActivityId = string & { readonly brand: unique symbol };
+export type ActivityTitle = string & { readonly brand: unique symbol };
+export type MemberId = string & { readonly brand: unique symbol };
 
-// DIバインディング切り替えのみで対応可能
-container.bind<IFamilyMemberRepository>(TYPES.IFamilyMemberRepository)
-         .to(SupabaseFamilyMemberRepository);
+// ファクトリ関数
+export const asActivityId = (value: string): ActivityId => value as ActivityId;
+export const asActivityTitle = (value: string): ActivityTitle => value as ActivityTitle;
+export const asMemberId = (value: string): MemberId => value as MemberId;
+
+// バリデーション付きファクトリ
+export const createActivityTitle = (value: string): Result<ActivityTitle, ValidationError> => {
+  if (!value.trim()) {
+    return err(new ValidationError('タイトルは必須です'));
+  }
+  if (value.length > 100) {
+    return err(new ValidationError('タイトルは100文字以内で入力してください'));
+  }
+  return ok(asActivityTitle(value));
+};
 ```
 
-このアーキテクチャにより、Sharendarは高い保守性、テスタビリティ、拡張性を持つアプリケーションとして設計されています。
+## データベース設計
+
+### Dexieスキーマ
+
+```typescript
+// infrastructure/db/schema.ts
+import Dexie, { Table } from 'dexie';
+import { Activity } from '../../domain/activity/types';
+
+export class SharendarDB extends Dexie {
+  activities!: Table<Activity>;
+  familyMembers!: Table<FamilyMember>;
+
+  constructor() {
+    super('sharendar-db');
+    
+    this.version(1).stores({
+      activities: '++id, category, status, [category+status], createdAt, updatedAt, *memberIds, *tags',
+      familyMembers: '++id, name, email, createdAt'
+    });
+    
+    this.version(2).stores({
+      activities: '++id, category, status, priority, [category+status], [status+priority], createdAt, updatedAt, startDate, dueDate, *memberIds, *tags'
+    }).upgrade(tx => {
+      // マイグレーション処理
+      return tx.activities.toCollection().modify(activity => {
+        if (!activity.priority) {
+          activity.priority = 'medium';
+        }
+      });
+    });
+  }
+}
+
+export const db = new SharendarDB();
+```
+
+### Repository実装パターン
+
+```typescript
+// infrastructure/db/activity-repository.ts
+@injectable()
+export class DexieActivityRepository implements ActivityRepository {
+  async save(activity: Activity): Promise<Result<Activity, RepositoryError>> {
+    try {
+      await db.activities.put(activity);
+      return ok(activity);
+    } catch (error) {
+      return err(new RepositoryError('SAVE_FAILED', error.message));
+    }
+  }
+  
+  async findById(id: ActivityId): Promise<Result<Activity | null, RepositoryError>> {
+    try {
+      const activity = await db.activities.get(id);
+      return ok(activity || null);
+    } catch (error) {
+      return err(new RepositoryError('FIND_FAILED', error.message));
+    }
+  }
+  
+  async findAll(): Promise<Result<Activity[], RepositoryError>> {
+    try {
+      const activities = await db.activities.orderBy('createdAt').reverse().toArray();
+      return ok(activities);
+    } catch (error) {
+      return err(new RepositoryError('FIND_ALL_FAILED', error.message));
+    }
+  }
+}
+```
+
+## 関連ドキュメント
+
+- [ドメインモデル詳細](/docs/domain-models.md) - 統一Activityドメインの詳細仕様
+- [API設計パターン](/docs/api-patterns.md) - Repository, UseCase, Error handling patterns
+- [テスト戦略](/docs/testing.md) - TDD実践ガイド
