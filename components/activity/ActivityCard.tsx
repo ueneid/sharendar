@@ -20,7 +20,7 @@ const priorityStyles = {
 const categoryLabels: Record<string, string> = {
   event: 'イベント',
   task: 'タスク',
-  deadline: 'deadline'
+  deadline: '締切'
 };
 
 const formatDate = (dateString: string): string => {

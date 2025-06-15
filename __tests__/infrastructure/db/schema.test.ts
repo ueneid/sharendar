@@ -17,7 +17,7 @@ describe('SharendarDB Schema Tests', () => {
       await testDb.initialize();
       
       expect(testDb.isOpen()).toBe(true);
-      expect(testDb.tables).toHaveLength(3);
+      expect(testDb.tables).toHaveLength(4);
       
       // テーブルの存在確認
       const tableNames = testDb.tables.map(table => table.name);
