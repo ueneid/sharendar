@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Calendar, Plus, Filter as FilterIcon } from 'lucide-react';
+import { Plus, Filter as FilterIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { useActivityStore } from '@/lib/store/activity-store';
@@ -10,6 +10,7 @@ import { MonthView } from './components/MonthView';
 import { CalendarFilter } from './components/CalendarFilter';
 import { ActivityCard } from '@/components/activity/ActivityCard';
 import { ActivityForm } from '@/components/activity/ActivityForm';
+import MobileLayout from '@/components/layout/MobileLayout';
 import type { Activity } from '@/domain/activity/types';
 
 export default function CalendarPage() {
@@ -59,21 +60,8 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900">カレンダー</h1>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* メインコンテンツ */}
-      <main className="max-w-6xl mx-auto px-4 py-6">
+    <MobileLayout title="カレンダー">
+      <div className="px-4 py-6 min-h-screen bg-gray-50">
         {/* エラー表示 */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
@@ -89,7 +77,7 @@ export default function CalendarPage() {
         )}
 
         {/* レイアウト */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {/* サイドバー（デスクトップ） */}
           <div className="hidden lg:block">
             <CalendarFilter />
@@ -175,7 +163,7 @@ export default function CalendarPage() {
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {/* フローティングアクションボタン */}
       <button
@@ -194,6 +182,6 @@ export default function CalendarPage() {
           onClose={handleCloseForm}
         />
       )}
-    </div>
+    </MobileLayout>
   );
 }

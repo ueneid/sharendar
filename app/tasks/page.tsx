@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CheckSquare, Plus, Filter as FilterIcon, AlertCircle } from 'lucide-react';
+import { Plus, Filter as FilterIcon, AlertCircle, CheckSquare } from 'lucide-react';
 import { useActivityStore } from '@/lib/store/activity-store';
 import { useFamilyMemberStore } from '@/lib/store';
 import { ActivityCard } from '@/components/activity/ActivityCard';
 import { ActivityForm } from '@/components/activity/ActivityForm';
 import { TaskFilter } from './components/TaskFilter';
+import MobileLayout from '@/components/layout/MobileLayout';
 import type { Activity } from '@/domain/activity/types';
 
 export default function TasksPage() {
@@ -60,35 +61,22 @@ export default function TasksPage() {
   const pendingTasks = taskActivities.filter(task => task.status === 'pending' || task.status === 'in_progress');
   const completedTasks = taskActivities.filter(task => task.status === 'completed');
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <CheckSquare className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900">タスク管理</h1>
-            </div>
-            
-            {/* 期限切れアラート */}
-            {overdueTasks.length > 0 && (
-              <button
-                onClick={handleShowOverdue}
-                className="flex items-center space-x-1 px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
-              >
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  期限切れ {overdueTasks.length}件
-                </span>
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+  // 期限切れアラートコンポーネント
+  const overdueAlert = overdueTasks.length > 0 && (
+    <button
+      onClick={handleShowOverdue}
+      className="flex items-center space-x-1 px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+    >
+      <AlertCircle className="w-4 h-4" />
+      <span className="text-sm font-medium">
+        期限切れ {overdueTasks.length}件
+      </span>
+    </button>
+  );
 
-      {/* メインコンテンツ */}
-      <main className="max-w-6xl mx-auto px-4 py-6">
+  return (
+    <MobileLayout title="タスク管理" actions={overdueAlert}>
+      <div className="px-4 py-6 min-h-screen bg-gray-50">
         {/* エラー表示 */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
@@ -104,7 +92,7 @@ export default function TasksPage() {
         )}
 
         {/* レイアウト */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {/* サイドバー（デスクトップ） */}
           <div className="hidden lg:block">
             <TaskFilter />
@@ -213,7 +201,7 @@ export default function TasksPage() {
             </div>
           </details>
         </div>
-      </main>
+      </div>
 
       {/* フローティングアクションボタン */}
       <button
@@ -232,6 +220,6 @@ export default function TasksPage() {
           onClose={handleCloseForm}
         />
       )}
-    </div>
+    </MobileLayout>
   );
 }

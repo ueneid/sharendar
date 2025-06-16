@@ -1,6 +1,5 @@
 "use client";
 
-import MobileLayout from "@/components/layout/MobileLayout";
 import { CameraIcon, UploadIcon, FileTextIcon } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
@@ -28,8 +27,19 @@ export default function OCRPage() {
   };
 
   return (
-    <MobileLayout title="プリント読み取り">
-      <div className="p-4 space-y-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* ヘッダー */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center space-x-2">
+            <CameraIcon className="w-6 h-6 text-blue-600" />
+            <h1 className="text-xl font-semibold text-gray-900">プリント読み取り</h1>
+          </div>
+        </div>
+      </div>
+
+      {/* メインコンテンツ */}
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
         <div className="bg-white rounded-lg shadow p-4">
           <h2 className="font-medium text-gray-900 mb-3">
             学校のプリントを撮影
@@ -149,6 +159,6 @@ export default function OCRPage() {
           </div>
         </div>
       </div>
-    </MobileLayout>
+    </div>
   );
 }
