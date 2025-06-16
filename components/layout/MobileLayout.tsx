@@ -1,5 +1,3 @@
-import BottomNavigation from "./BottomNavigation";
-
 interface MobileLayoutProps {
   children: React.ReactNode;
   title?: string;
@@ -16,11 +14,9 @@ export default function MobileLayout({ children, title, actions }: MobileLayoutP
         </header>
       )}
       
-      <main className="flex-1 overflow-y-auto pb-16">
+      <main className="flex-1 overflow-y-auto">
         {children}
       </main>
-      
-      <BottomNavigation />
     </div>
   );
 }
