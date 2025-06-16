@@ -103,6 +103,12 @@ UI層 → Store層 → Application層 → Domain層 → Infrastructure層
 
 ## 最新機能
 
+### グローバルナビゲーション（2025年6月実装） ✅
+- 全ページで統一されたボトムナビゲーション
+- モバイルファーストのグローバルレイアウト（app/layout.tsx）
+- アクセシビリティ向上（aria-label、アクティブ状態）
+- 5タブ構成：ホーム、カレンダー、タスク、OCR、設定
+
 ### フィルタリング機能（2025年6月実装） ✅
 - カテゴリ、ステータス、優先度、メンバー、日付範囲による絞り込み
 - ActivityStore統合、リアルタイムフィルタリング
@@ -126,9 +132,10 @@ UI層 → Store層 → Application層 → Domain層 → Infrastructure層
 - 統一Activityドメインモデル実装
 - ActivityCard/ActivityForm UIコンポーネント
 - カレンダー/タスクページでの統合表示
-- DIコンテナによる依存性注入
+- DIコンテナによる依存性注入（FamilyMemberRepository含む）
 - Zustandストアの実装
 - 包括的フィルタリング機能（カテゴリ、ステータス、優先度、メンバー、日付範囲）
+- グローバルナビゲーション（MobileNavigationコンポーネント、レイアウト統一）
 
 ### 📋 未実装
 - OCR機能（Google Vision API統合）
@@ -147,6 +154,7 @@ UI層 → Store層 → Application層 → Domain層 → Infrastructure層
 4. **テストファースト**: 実装前に必ずテストを書く
 5. **日本語UI**: エラーメッセージ、ラベル等はすべて日本語
 6. **テスト環境**: fake-indexeddbでIndexedDBをモック、test-setup.tsで設定済み
+7. **グローバルナビゲーション**: app/layout.tsxで実装済み、MobileLayoutコンポーネントは重複ナビゲーションを含まない
 
 ## よくある問題と解決法
 
@@ -170,4 +178,20 @@ const activityUseCase = new ActivityUseCase();
 // ✅ 正しい: DIコンテナ経由
 const container = getInitializedContainer();
 const activityUseCase = container.get<ActivityUseCase>('ActivityUseCase');
+```
+
+### ダブルナビゲーション問題
+```typescript
+// ❌ 間違い: MobileLayoutでナビゲーション追加
+export default function MobileLayout({ children }) {
+  return (
+    <div>
+      {children}
+      <MobileNavigation /> {/* 重複! */}
+    </div>
+  );
+}
+
+// ✅ 正しい: app/layout.tsxでのみナビゲーション表示
+// MobileLayoutは純粋なヘッダー + コンテンツ領域のみ
 ```
