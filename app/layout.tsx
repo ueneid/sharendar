@@ -3,6 +3,8 @@ import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import { DIProvider } from "@/components/providers/DIProvider";
 import MobileNavigation from "@/components/layout/MobileNavigation";
+import { NetworkStatus } from "@/components/common/NetworkStatus";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 
 const notoSansJP = Noto_Sans_JP({ 
   subsets: ["latin"],
@@ -14,6 +16,13 @@ export const metadata: Metadata = {
   title: "Sharendar - 家族の予定をスマートに共有",
   description: "家族やグループで予定・タスク・持ち物をスムーズに共有できるWebアプリ",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+  },
 };
 
 export const viewport = {
@@ -34,6 +43,12 @@ export default function RootLayout({
       <body className={`${notoSansJP.variable} font-sans h-full`}>
         <DIProvider>
           <div className="h-full flex flex-col">
+            {/* ネットワーク状態表示 */}
+            <NetworkStatus />
+            
+            {/* PWAインストールプロンプト */}
+            <InstallPrompt position="top" />
+            
             <main className="flex-1 overflow-y-auto pb-16">
               {children}
             </main>

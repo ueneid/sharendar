@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharendar Icon Generator</title>
+</head>
+<body>
+    <h1>Sharendar アイコン生成</h1>
+    <canvas id="canvas192" width="192" height="192" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+    <canvas id="canvas512" width="512" height="512" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+    <canvas id="canvasFavicon" width="32" height="32" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+    
+    <div>
+        <button onclick="downloadIcon('canvas192', 'icon-192.png')">192x192 ダウンロード</button>
+        <button onclick="downloadIcon('canvas512', 'icon-512.png')">512x512 ダウンロード</button>
+        <button onclick="downloadIcon('canvasFavicon', 'favicon.png')">favicon ダウンロード</button>
+    </div>
+
+    <script>
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // 背景色（ブランドカラー）
+            ctx.fillStyle = '#0ea5e9';
+            ctx.fillRect(0, 0, size, size);
+            
+            // 角丸背景
+            ctx.beginPath();
+            ctx.roundRect(size * 0.1, size * 0.1, size * 0.8, size * 0.8, size * 0.1);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            
+            // カレンダーアイコンのベース
+            const calendarSize = size * 0.6;
+            const calendarX = (size - calendarSize) / 2;
+            const calendarY = size * 0.25;
+            
+            // カレンダー本体
+            ctx.fillStyle = '#0ea5e9';
+            ctx.fillRect(calendarX, calendarY, calendarSize, calendarSize * 0.8);
+            
+            // カレンダーのヘッダー
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(calendarX, calendarY, calendarSize, calendarSize * 0.2);
+            
+            // 白い線（グリッド）
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = size * 0.01;
+            
+            // 縦線
+            for (let i = 1; i < 4; i++) {
+                ctx.beginPath();
+                ctx.moveTo(calendarX + (calendarSize * i / 4), calendarY + calendarSize * 0.2);
+                ctx.lineTo(calendarX + (calendarSize * i / 4), calendarY + calendarSize * 0.8);
+                ctx.stroke();
+            }
+            
+            // 横線
+            for (let i = 1; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(calendarX, calendarY + calendarSize * 0.2 + (calendarSize * 0.6 * i / 3));
+                ctx.lineTo(calendarX + calendarSize, calendarY + calendarSize * 0.2 + (calendarSize * 0.6 * i / 3));
+                ctx.stroke();
+            }
+            
+            // 共有を表す小さな丸（家族メンバー）
+            const dotSize = size * 0.08;
+            const dotY = calendarY + calendarSize + size * 0.05;
+            
+            // 3つの点で家族を表現
+            ctx.fillStyle = '#f59e0b'; // アクセントカラー
+            ctx.beginPath();
+            ctx.arc(calendarX + calendarSize * 0.2, dotY, dotSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#ef4444'; // アクセントカラー2
+            ctx.beginPath();
+            ctx.arc(calendarX + calendarSize * 0.5, dotY, dotSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#10b981'; // アクセントカラー3
+            ctx.beginPath();
+            ctx.arc(calendarX + calendarSize * 0.8, dotY, dotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function downloadIcon(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // アイコンを描画
+        drawIcon('canvas192', 192);
+        drawIcon('canvas512', 512);
+        drawIcon('canvasFavicon', 32);
+    </script>
+</body>
+</html>
