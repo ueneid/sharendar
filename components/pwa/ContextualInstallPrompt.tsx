@@ -93,13 +93,15 @@ export default function ContextualInstallPrompt({
   // ユーザー行動を記録
   const logUserAction = useCallback((action: UserAction) => {
     try {
-      const updatedActions = [...userActions, action].slice(-MAX_LOG_ENTRIES);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedActions));
-      setUserActions(updatedActions);
+      setUserActions(prevActions => {
+        const updatedActions = [...prevActions, action].slice(-MAX_LOG_ENTRIES);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedActions));
+        return updatedActions;
+      });
     } catch (error) {
       console.warn('ユーザー行動ログの保存に失敗:', error);
     }
-  }, [userActions]);
+  }, []);
 
   // トリガー行動を記録し、プロンプト表示を検討
   useEffect(() => {

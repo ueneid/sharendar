@@ -42,26 +42,35 @@ export function usePWAInstall(): UsePWAInstallReturn {
 
   // ローカルストレージから状態を読み込み
   const loadState = useCallback((): PWAInstallState => {
-    if (typeof window === 'undefined') return state;
+    const defaultState = {
+      isInstallable: false,
+      isInstalled: false,
+      canShowPrompt: false,
+      hasShownPrompt: false,
+      visitCount: 0,
+      lastPromptDate: null,
+    };
+    
+    if (typeof window === 'undefined') return defaultState;
     
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        return { ...state, ...JSON.parse(stored) };
+        return { ...defaultState, ...JSON.parse(stored) };
       }
     } catch (error) {
       console.warn('PWAインストール状態の読み込みに失敗:', error);
     }
-    return state;
-  }, [state]);
+    return defaultState;
+  }, []);
 
   // ローカルストレージに状態を保存
-  const saveState = useCallback((newState: Partial<PWAInstallState>) => {
+  const saveState = useCallback((newState: Partial<PWAInstallState>, currentState?: PWAInstallState) => {
     if (typeof window === 'undefined') return;
     
     try {
-      const currentState = loadState();
-      const updatedState = { ...currentState, ...newState };
+      const baseState = currentState || loadState();
+      const updatedState = { ...baseState, ...newState };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedState));
       setState(updatedState);
     } catch (error) {
@@ -73,7 +82,7 @@ export function usePWAInstall(): UsePWAInstallReturn {
   const incrementVisitCount = useCallback(() => {
     const currentState = loadState();
     const newVisitCount = currentState.visitCount + 1;
-    saveState({ visitCount: newVisitCount });
+    saveState({ visitCount: newVisitCount }, currentState);
   }, [loadState, saveState]);
 
   // プロンプト表示可能かチェック
@@ -127,10 +136,11 @@ export function usePWAInstall(): UsePWAInstallReturn {
       const choiceResult = await deferredPrompt.userChoice;
       
       // 状態を更新
+      const currentState = loadState();
       saveState({
         hasShownPrompt: true,
         lastPromptDate: new Date().toISOString(),
-      });
+      }, currentState);
       
       // プロンプトを使用済みにする
       setDeferredPrompt(null);
@@ -140,15 +150,16 @@ export function usePWAInstall(): UsePWAInstallReturn {
       console.error('インストールプロンプトの表示に失敗:', error);
       return false;
     }
-  }, [deferredPrompt, saveState]);
+  }, [deferredPrompt, saveState, loadState]);
 
   // プロンプトを却下
   const dismissPrompt = useCallback(() => {
+    const currentState = loadState();
     saveState({
       hasShownPrompt: true,
       lastPromptDate: new Date().toISOString(),
-    });
-  }, [saveState]);
+    }, currentState);
+  }, [saveState, loadState]);
 
   useEffect(() => {
     // 初期状態を読み込み
@@ -174,13 +185,14 @@ export function usePWAInstall(): UsePWAInstallReturn {
         canShowPrompt: canShow,
       });
       
-      saveState({ isInstallable: true });
+      saveState({ isInstallable: true }, currentState);
     };
 
     // appinstalled イベントのリスナーを設定
     const handleAppInstalled = () => {
       setDeferredPrompt(null);
-      saveState({ isInstalled: true, isInstallable: false });
+      const currentState = loadState();
+      saveState({ isInstalled: true, isInstallable: false }, currentState);
       setState(prev => ({ ...prev, isInstalled: true, isInstallable: false }));
     };
 
@@ -200,7 +212,7 @@ export function usePWAInstall(): UsePWAInstallReturn {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, [loadState, saveState, incrementVisitCount, checkIsInstalled, checkCanShowPrompt]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     isInstallable: state.isInstallable,

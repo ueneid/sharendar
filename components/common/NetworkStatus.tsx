@@ -20,6 +20,12 @@ export function NetworkStatus({
 }: NetworkStatusProps) {
   const { isOnline, wasOffline, lastOnlineAt } = useOnlineStatus();
   const [showOnlineMessage, setShowOnlineMessage] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // クライアントサイドでのみマウント
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     // オフライン状態から復帰した場合のみ、一時的に復帰メッセージを表示
@@ -37,7 +43,7 @@ export function NetworkStatus({
   // 常に表示する場合、または、オフライン時、または、復帰メッセージ表示中の場合に表示
   const shouldShow = alwaysShow || !isOnline || showOnlineMessage;
 
-  if (!shouldShow) {
+  if (!isMounted || !shouldShow) {
     return null;
   }
 
@@ -98,6 +104,16 @@ export function NetworkStatus({
  */
 export function NetworkIndicator() {
   const { isOnline } = useOnlineStatus();
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // クライアントサイドでのみマウント
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <div

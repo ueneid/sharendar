@@ -54,7 +54,7 @@ export function useOnlineStatus(): OnlineStatus {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [isOnline, wasOffline, lastOnlineAt]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     isOnline,

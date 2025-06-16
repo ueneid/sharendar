@@ -27,6 +27,12 @@ export default function InstallPrompt({
   
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // クライアントサイドでのみマウント
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // プロンプト表示条件をチェック
   useEffect(() => {
@@ -58,8 +64,8 @@ export default function InstallPrompt({
     }, 300);
   };
 
-  // プロンプトが表示されない場合は何も表示しない
-  if (!isVisible || isInstalled) {
+  // SSR中またはプロンプトが表示されない場合は何も表示しない
+  if (!isMounted || !isVisible || isInstalled) {
     return null;
   }
 
