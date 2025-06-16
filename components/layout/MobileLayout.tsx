@@ -14,9 +14,9 @@ export default function MobileLayout({ children, title, actions }: MobileLayoutP
         </header>
       )}
       
-      <main className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         {children}
-      </main>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import React from 'react';
 import type { Activity } from '@/domain/activity/types';
 import { useActivityStore } from '@/lib/store/activity-store';
 import { useFamilyMembers } from '@/lib/store';
+import { trackUserAction } from '@/components/pwa/ContextualInstallPrompt';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -80,6 +81,9 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       await reopenActivity(activity.id);
     } else {
       await completeActivity(activity.id);
+      
+      // ユーザー行動を追跡（アクティビティ完了）
+      trackUserAction('activity_completed', activity.category);
     }
   };
 

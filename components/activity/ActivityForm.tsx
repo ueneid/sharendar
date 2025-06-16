@@ -5,6 +5,8 @@ import type { Activity, ActivityCategory, ActivityPriority, CreateActivityComman
 import type { ActivityId } from '@/domain/shared/branded-types';
 import { useActivityStore } from '@/lib/store/activity-store';
 import { useFamilyMembers } from '@/lib/store';
+import { useIsOnline } from '@/lib/hooks/useOnlineStatus';
+import { trackUserAction } from '@/components/pwa/ContextualInstallPrompt';
 
 interface ActivityFormProps {
   mode: 'create' | 'edit';
@@ -58,9 +60,11 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
 }) => {
   const { createActivity, updateActivity, isLoading, error, clearError } = useActivityStore();
   const familyMembers = useFamilyMembers();
+  const isOnline = useIsOnline();
   
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 編集モードの場合、既存データでフォームを初期化
   useEffect(() => {
@@ -149,6 +153,8 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
     
     if (!validateForm()) return;
 
+    setIsSubmitting(true);
+
     try {
       if (mode === 'create') {
         const command: CreateActivityCommand = {
@@ -179,6 +185,9 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         }
 
         await createActivity(command);
+        
+        // ユーザー行動を追跡（アクティビティ作成）
+        trackUserAction('activity_created', formData.category);
       } else if (mode === 'edit' && activity) {
         const command: UpdateActivityCommand = {
           title: formData.title.trim(),
@@ -210,10 +219,13 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         await updateActivity(activity.id, command);
       }
 
+      // 楽観的UI更新：成功時にすぐにフォームを閉じる
       onSubmit?.();
       onClose();
     } catch (err) {
       setFormErrors({ general: err instanceof Error ? err.message : '操作に失敗しました' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -241,6 +253,20 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} role="form" className="p-6 space-y-6">
+          {/* オフライン状態の警告 */}
+          {!isOnline && (
+            <div role="alert" className="text-orange-700 text-sm bg-orange-50 p-3 rounded border-l-4 border-orange-400">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span>
+                  オフライン中です。データは端末に保存され、接続復帰時に同期されます。
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* エラー表示 */}
           {(error || formErrors.general) && (
             <div role="alert" className="text-red-600 text-sm bg-red-50 p-3 rounded">
@@ -479,11 +505,17 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isLoading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading || isSubmitting}
+              className={`px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed ${
+                !isOnline 
+                  ? 'bg-orange-600 hover:bg-orange-700' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              {isLoading 
+              {isLoading || isSubmitting
                 ? (mode === 'create' ? '作成中...' : '更新中...')
+                : !isOnline
+                ? (mode === 'create' ? 'オフライン作成' : 'オフライン更新')
                 : (mode === 'create' ? '作成' : '更新')
               }
             </button>
