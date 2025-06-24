@@ -110,19 +110,18 @@ export function NetworkIndicator() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  
-  if (!isMounted) {
-    return null;
-  }
 
   return (
     <div
       className={`
         w-2 h-2 rounded-full transition-colors duration-300
-        ${isOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}
+        ${isMounted 
+          ? (isOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse') 
+          : 'bg-gray-300'
+        }
       `}
-      title={isOnline ? 'オンライン' : 'オフライン'}
-      aria-label={isOnline ? 'オンライン' : 'オフライン'}
+      title={isMounted ? (isOnline ? 'オンライン' : 'オフライン') : ''}
+      aria-label={isMounted ? (isOnline ? 'オンライン' : 'オフライン') : ''}
     />
   );
 }

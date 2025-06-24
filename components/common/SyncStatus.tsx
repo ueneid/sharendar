@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncStatus } from '@/lib/hooks/useSyncStatus';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface SyncStatusProps {
   /** コンパクト表示（ナビゲーション用） */
@@ -23,10 +23,16 @@ export function SyncStatus({ compact = false }: SyncStatusProps) {
   } = useSyncStatus();
   
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   
-  if (!shouldShowSyncIndicator && compact) {
-    return null;
-  }
+  // クライアントサイドでのみマウント
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  // SSR時は常に非表示状態でレンダリング
+  const shouldShow = isMounted && shouldShowSyncIndicator;
+  const showContent = isMounted && shouldShowSyncIndicator;
   
   const pendingCount = getPendingActionsCount();
   
@@ -98,41 +104,47 @@ export function SyncStatus({ compact = false }: SyncStatusProps) {
   if (compact) {
     return (
       <div 
-        className="flex items-center gap-1 text-xs cursor-pointer"
+        className={`flex items-center gap-1 text-xs cursor-pointer transition-opacity ${showContent ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setIsExpanded(!isExpanded)}
-        title={getSyncStatusText()}
+        title={isMounted ? getSyncStatusText() : ''}
       >
-        {getSyncIcon()}
-        {pendingCount > 0 && (
-          <span className="bg-orange-500 text-white text-xs rounded-full px-1 min-w-4 text-center">
-            {pendingCount}
-          </span>
+        {showContent && (
+          <>
+            {getSyncIcon()}
+            {pendingCount > 0 && (
+              <span className="bg-orange-500 text-white text-xs rounded-full px-1 min-w-4 text-center">
+                {pendingCount}
+              </span>
+            )}
+          </>
         )}
       </div>
     );
   }
   
   return (
-    <div className="bg-gray-50 border-l-4 border-blue-400 p-3">
-      <div 
-        className="flex items-center gap-2 cursor-pointer"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        {getSyncIcon()}
-        <span className="text-sm font-medium text-gray-700">
-          {getSyncStatusText()}
-        </span>
-        <svg 
-          className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
+    <div className={`bg-gray-50 border-l-4 border-blue-400 p-3 transition-opacity ${shouldShow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {showContent && (
+        <div 
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
+          {getSyncIcon()}
+          <span className="text-sm font-medium text-gray-700">
+            {getSyncStatusText()}
+          </span>
+          <svg 
+            className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      )}
       
-      {isExpanded && pendingActions.length > 0 && (
+      {showContent && isExpanded && pendingActions.length > 0 && (
         <div className="mt-3 pl-6">
           <h4 className="text-sm font-medium text-gray-600 mb-2">同期待ちの変更:</h4>
           <div className="space-y-1">
@@ -161,7 +173,7 @@ export function SyncStatus({ compact = false }: SyncStatusProps) {
         </div>
       )}
       
-      {syncError && isExpanded && (
+      {showContent && syncError && isExpanded && (
         <div className="mt-2 pl-6">
           <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
             エラー: {syncError}
