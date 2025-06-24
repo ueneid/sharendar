@@ -1,22 +1,134 @@
 {
-  "name": "Sharendar",
+  "name": "Sharendar - 家族の予定とタスク共有",
   "short_name": "Sharendar",
-  "description": "家族の予定とタスクを簡単に共有",
+  "description": "家族の予定とタスクを簡単に共有・管理できるモバイルファーストアプリ",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "theme_color": "#0ea5e9",
   "background_color": "#ffffff",
+  "lang": "ja",
+  "scope": "/",
+  "categories": [
+    "lifestyle",
+    "productivity",
+    "utilities"
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Sharendar メイン画面"
+    },
+    {
+      "src": "/screenshot-wide.png", 
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Sharendar タブレット表示"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "新しい予定を追加",
+      "short_name": "予定追加",
+      "description": "新しいカレンダー予定を素早く作成",
+      "url": "/calendar?action=create",
+      "icons": [
+        {
+          "src": "/shortcut-calendar.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "新しいタスクを追加",
+      "short_name": "タスク追加", 
+      "description": "新しいタスクを素早く作成",
+      "url": "/tasks?action=create",
+      "icons": [
+        {
+          "src": "/shortcut-task.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "OCRで読み取り",
+      "short_name": "OCR",
+      "description": "カメラでテキストを読み取って予定作成",
+      "url": "/ocr",
+      "icons": [
+        {
+          "src": "/shortcut-ocr.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
   "icons": [
+    {
+      "src": "/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "edge_side_panel": {
+    "preferred_width": 480
+  }
 }
