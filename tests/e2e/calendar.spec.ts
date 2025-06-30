@@ -62,16 +62,18 @@ test.describe('Calendar Page', () => {
     // Click next month button (usually the second button in calendar header)
     const nextButton = page.locator('button').filter({ has: page.locator('svg') }).nth(1);
     await nextButton.click();
-    await page.waitForTimeout(500); // Wait for transition
     
+    // Wait for month header to update
+    await expect(monthHeader).not.toHaveText(currentMonth || '');
     const newMonth = await monthHeader.textContent();
     expect(newMonth).not.toBe(currentMonth);
     
     // Go back to current month
     const prevButton = page.locator('button').filter({ has: page.locator('svg') }).first();
     await prevButton.click();
-    await page.waitForTimeout(500);
     
+    // Wait for month header to update back
+    await expect(monthHeader).toHaveText(currentMonth || '');
     const backToCurrentMonth = await monthHeader.textContent();
     expect(backToCurrentMonth).toBe(currentMonth);
   });

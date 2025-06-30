@@ -1,6 +1,28 @@
 import { test, expect } from '@playwright/test';
+import { injectAxe, checkA11y } from 'axe-playwright';
 
 test.describe('Accessibility', () => {
+  test('should have no major accessibility violations', async ({ page }) => {
+    await page.goto('/');
+    await injectAxe(page);
+    
+    // Run accessibility checks, ignoring known issues temporarily
+    await checkA11y(page, null, {
+      detailedReport: true,
+      detailedReportOptions: {
+        html: true,
+      },
+      axeOptions: {
+        rules: {
+          // Temporarily disable viewport rule until we fix meta tag
+          'meta-viewport': { enabled: false },
+          // Allow some color contrast issues for now
+          'color-contrast': { enabled: false },
+        },
+      },
+    });
+  });
+
   test('should have basic accessibility features', async ({ page }) => {
     await page.goto('/');
     
