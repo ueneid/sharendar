@@ -5,6 +5,7 @@ import { DIProvider } from "@/components/providers/DIProvider";
 import MobileNavigation from "@/components/layout/MobileNavigation";
 import { NetworkStatus } from "@/components/common/NetworkStatus";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
+import { GlobalActivityForm } from "@/components/activity/GlobalActivityForm";
 
 const notoSansJP = Noto_Sans_JP({ 
   subsets: ["latin"],
@@ -18,10 +19,9 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
     ],
-    apple: { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
   },
 };
 
@@ -55,6 +55,9 @@ export default function RootLayout({
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 pb-safe">
               <MobileNavigation />
             </nav>
+            
+            {/* グローバルアクティビティ編集フォーム */}
+            <GlobalActivityForm />
           </div>
         </DIProvider>
       </body>

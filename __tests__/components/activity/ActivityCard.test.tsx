@@ -13,6 +13,8 @@ const mockUseActivityStore = {
   completeActivity: vi.fn(),
   reopenActivity: vi.fn(),
   selectActivity: vi.fn(),
+  setEditingActivity: vi.fn(),
+  setShowEditForm: vi.fn(),
   isLoading: false,
   error: null,
 };
@@ -87,7 +89,13 @@ describe('ActivityCard', () => {
     });
 
     it('should show correct priority styling', () => {
-      render(<ActivityCard activity={testActivity} />);
+      // 期限切れにならないように未来の日付を設定
+      const activityWithFutureDate = {
+        ...testActivity,
+        dueDate: asDateString('2026-12-31')
+      };
+      
+      render(<ActivityCard activity={activityWithFutureDate} />);
       
       // medium priority should have yellow styling
       const card = screen.getByTestId('activity-card');
@@ -212,8 +220,8 @@ describe('ActivityCard', () => {
       const editButton = screen.getByRole('button', { name: /編集/ });
       await user.click(editButton);
       
-      // TODO: 統一Activityフォームが実装されたら適切なアクションを確認
-      expect(editButton).toBeInTheDocument();
+      expect(mockUseActivityStore.setEditingActivity).toHaveBeenCalledWith(testActivity);
+      expect(mockUseActivityStore.setShowEditForm).toHaveBeenCalledWith(true);
     });
 
     it('should show delete button and handle delete with confirmation', async () => {

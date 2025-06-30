@@ -56,6 +56,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
     completeActivity,
     reopenActivity,
     selectActivity,
+    setEditingActivity,
+    setShowEditForm,
     isLoading,
     error
   } = useActivityStore();
@@ -89,8 +91,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // TODO: 統一Activityフォームが実装されたら適切なアクションを実行
-    console.log('Edit activity:', activity.id);
+    setEditingActivity(activity);
+    setShowEditForm(true);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {

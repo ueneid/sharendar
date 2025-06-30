@@ -9,16 +9,21 @@ import { useFamilyMemberStore } from '@/lib/store';
 import { MonthView } from './components/MonthView';
 import { CalendarFilter } from './components/CalendarFilter';
 import { ActivityCard } from '@/components/activity/ActivityCard';
-import { ActivityForm } from '@/components/activity/ActivityForm';
 import MobileLayout from '@/components/layout/MobileLayout';
 import type { Activity } from '@/domain/activity/types';
 
 export default function CalendarPage() {
-  const { loadAllActivities, activities, getFilteredActivities, isLoading, error } = useActivityStore();
+  const { 
+    loadAllActivities, 
+    activities, 
+    getFilteredActivities, 
+    isLoading, 
+    error,
+    setShowEditForm,
+    setEditingActivity
+  } = useActivityStore();
   const { loadMembers } = useFamilyMemberStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
   
   // フィルタリングされたアクティビティを取得
   const filteredActivities = getFilteredActivities();
@@ -45,18 +50,13 @@ export default function CalendarPage() {
     : [];
 
   const handleAddEvent = () => {
-    setEditingActivity(undefined);
-    setShowEventForm(true);
+    setEditingActivity(null);
+    setShowEditForm(true);
   };
 
   const handleEditActivity = (activity: Activity) => {
     setEditingActivity(activity);
-    setShowEventForm(true);
-  };
-
-  const handleCloseForm = () => {
-    setShowEventForm(false);
-    setEditingActivity(undefined);
+    setShowEditForm(true);
   };
 
   return (
@@ -174,14 +174,6 @@ export default function CalendarPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* ActivityForm モーダル */}
-      {showEventForm && (
-        <ActivityForm
-          mode={editingActivity ? "edit" : "create"}
-          activity={editingActivity}
-          onClose={handleCloseForm}
-        />
-      )}
     </MobileLayout>
   );
 }

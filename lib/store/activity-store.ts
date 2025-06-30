@@ -36,6 +36,8 @@ interface ActivityStore {
   // === State ===
   activities: Activity[];
   selectedActivity: ActivityId | null;
+  editingActivity: Activity | null;
+  showEditForm: boolean;
   isLoading: boolean;
   error: string | null;
   filters: ActivityFilters;
@@ -54,6 +56,8 @@ interface ActivityStore {
   
   // UI State
   selectActivity: (id: ActivityId | null) => void;
+  setEditingActivity: (activity: Activity | null) => void;
+  setShowEditForm: (show: boolean) => void;
   clearError: () => void;
   
   // Filter Operations
@@ -88,6 +92,8 @@ export const useActivityStore = create<ActivityStore>()(
       // === Initial State ===
       activities: [],
       selectedActivity: null,
+      editingActivity: null,
+      showEditForm: false,
       isLoading: false,
       error: null,
       filters: {
@@ -293,6 +299,14 @@ export const useActivityStore = create<ActivityStore>()(
       // === UI State ===
       selectActivity: (id: ActivityId | null) => {
         set({ selectedActivity: id });
+      },
+
+      setEditingActivity: (activity: Activity | null) => {
+        set({ editingActivity: activity });
+      },
+
+      setShowEditForm: (show: boolean) => {
+        set({ showEditForm: show });
       },
 
       clearError: () => {

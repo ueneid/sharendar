@@ -11,27 +11,6 @@ export interface FamilyMemberDTO {
   color: string;
 }
 
-export interface CalendarEventDTO {
-  id: string;
-  title: string;
-  date: string; // YYYY-MM-DD
-  time?: string; // HH:MM
-  memberIds: string[];
-  type: 'event' | 'task';
-  memo?: string;
-}
-
-export interface TaskDTO {
-  id: string;
-  title: string;
-  dueDate?: string; // YYYY-MM-DD
-  priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'completed';
-  memberIds: string[];
-  checklist: ChecklistItemDTO[];
-  createdAt: string; // YYYY-MM-DD
-  completedAt?: string; // YYYY-MM-DD
-}
 
 export interface ChecklistItemDTO {
   id: string;
@@ -87,45 +66,18 @@ export interface DBActivity {
 export class SharendarDB extends Dexie {
   // テーブル定義
   familyMembers!: Table<FamilyMemberDTO>;
-  calendarEvents!: Table<CalendarEventDTO>;
-  tasks!: Table<TaskDTO>;
   activities!: Table<DBActivity>; // 統一Activityテーブル
 
   constructor() {
     super('SharendarDB');
     
-    // バージョン1のスキーマ定義
+    // バージョン1: 初期設計 - 統一Activityドメインに基づく設計
     this.version(1).stores({
       // 家族メンバー: id でプライマリキー、name と color でセカンダリインデックス
       familyMembers: 'id, name, color',
       
-      // カレンダーイベント: id でプライマリキー、date でインデックス、memberIds は複数値インデックス
-      calendarEvents: 'id, date, *memberIds',
-      
-      // タスク: id でプライマリキー、status、dueDate でインデックス、memberIds は複数値インデックス
-      tasks: 'id, status, dueDate, *memberIds'
-    });
-    
-    // バージョン2: 統一Activityテーブル追加
-    this.version(2).stores({
-      familyMembers: 'id, name, color',
-      calendarEvents: 'id, date, *memberIds',
-      tasks: 'id, status, dueDate, *memberIds',
       // 統一Activity: 複数フィールドでインデックス作成
       activities: 'id, category, status, priority, startDate, dueDate, updatedAt, createdAt, *memberIds, *tags'
-    }).upgrade(tx => {
-      // バージョン2へのアップグレード時にサンプルデータを追加
-      console.log('Upgrading to version 2: Adding Activity schema');
-    });
-    
-    // バージョン3: 統一Activity移行（開発用）
-    this.version(3).stores({
-      familyMembers: 'id, name, color',
-      // 旧テーブルを削除して統一Activityのみに
-      activities: 'id, category, status, priority, startDate, dueDate, updatedAt, createdAt, *memberIds, *tags'
-    }).upgrade(tx => {
-      console.log('Upgrading to version 3: Unified Activity domain');
-      // 必要に応じて旧データの移行処理
     });
   }
 
