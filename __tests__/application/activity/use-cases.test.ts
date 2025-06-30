@@ -22,7 +22,6 @@ describe('ActivityUseCase', () => {
       findByStatus: vi.fn(),
       findOverdue: vi.fn(),
       findUpcoming: vi.fn(),
-      migrateFromLegacyData: vi.fn(),
     };
     
     useCase = new ActivityUseCase(mockRepository);

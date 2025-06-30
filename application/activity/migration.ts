@@ -4,7 +4,8 @@ import type { ActivityError } from '@/domain/activity/types';
 
 /**
  * データ移行用のユースケース
- * 既存のCalendarEventとTaskからActivityドメインへの移行を管理
+ * 統一Activityドメインへの移行が完了しているため、このクラスは非推奨です
+ * @deprecated 統一Activityドメインへの移行が完了済み
  */
 export class ActivityMigrationUseCase {
   constructor(
@@ -12,42 +13,20 @@ export class ActivityMigrationUseCase {
   ) {}
 
   /**
-   * 段階的移行: 既存データをActivityテーブルに統合
-   * 1. CalendarEvent → Activity変換
-   * 2. Task → Activity変換
-   * 3. Activity統合テーブルに保存
-   * 4. データ整合性チェック
+   * @deprecated 移行は完了済みです
    */
   async migrateAllLegacyData(): Promise<Result<MigrationResult, ActivityError>> {
-    try {
-      // ActivityRepositoryの移行機能を使用
-      const migrationResult = await this.activityRepository.migrateFromLegacyData();
-      
-      if (migrationResult.isErr()) {
-        return err(migrationResult.error);
-      }
+    console.warn('ActivityMigrationUseCase: 統一Activityドメインへの移行は完了済みです');
+    
+    const result: MigrationResult = {
+      success: true,
+      migratedCalendarEvents: 0,
+      migratedTasks: 0,
+      totalActivities: 0,
+      completedAt: new Date().toISOString()
+    };
 
-      // 移行後のデータ確認
-      const verificationResult = await this.verifyMigration();
-      if (verificationResult.isErr()) {
-        return err(verificationResult.error);
-      }
-
-      const result: MigrationResult = {
-        success: true,
-        migratedCalendarEvents: verificationResult.value.calendarEventCount,
-        migratedTasks: verificationResult.value.taskCount,
-        totalActivities: verificationResult.value.totalActivityCount,
-        completedAt: new Date().toISOString()
-      };
-
-      return ok(result);
-    } catch (error) {
-      return err({
-        type: 'DatabaseError',
-        message: `データ移行中にエラーが発生しました: ${error}`
-      });
-    }
+    return ok(result);
   }
 
   /**

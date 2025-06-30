@@ -39,7 +39,5 @@ export interface ActivityRepository {
   ): Promise<Result<ReadonlyArray<Activity>, ActivityError>>;
   
   // === Migration Support ===
-  
-  // 既存のCalendarEventとTaskからActivityへのマイグレーション用
-  migrateFromLegacyData(): Promise<Result<void, ActivityError>>;
+  // 統一Activityドメインへの移行が完了しているため、移行メソッドは削除されました
 }

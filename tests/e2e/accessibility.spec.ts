@@ -7,7 +7,7 @@ test.describe('Accessibility', () => {
     await injectAxe(page);
     
     // Run accessibility checks, ignoring known issues temporarily
-    await checkA11y(page, null, {
+    await checkA11y(page, undefined, {
       detailedReport: true,
       detailedReportOptions: {
         html: true,

@@ -5,16 +5,21 @@ import { Plus, Filter as FilterIcon, AlertCircle, CheckSquare } from 'lucide-rea
 import { useActivityStore } from '@/lib/store/activity-store';
 import { useFamilyMemberStore } from '@/lib/store';
 import { ActivityCard } from '@/components/activity/ActivityCard';
-import { ActivityForm } from '@/components/activity/ActivityForm';
 import { TaskFilter } from './components/TaskFilter';
 import MobileLayout from '@/components/layout/MobileLayout';
 import type { Activity } from '@/domain/activity/types';
 
 export default function TasksPage() {
-  const { loadAllActivities, activities, getFilteredActivities, isLoading, error } = useActivityStore();
+  const { 
+    loadAllActivities, 
+    activities, 
+    getFilteredActivities, 
+    isLoading, 
+    error,
+    setShowEditForm,
+    setEditingActivity
+  } = useActivityStore();
   const { loadMembers } = useFamilyMemberStore();
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
   
   // フィルタリングされたアクティビティを取得し、その中からタスクのみを抽出
   const filteredActivities = getFilteredActivities();
@@ -39,18 +44,13 @@ export default function TasksPage() {
   }, [loadMembers, loadAllActivities]);
 
   const handleAddTask = () => {
-    setEditingActivity(undefined);
-    setShowTaskForm(true);
+    setEditingActivity(null);
+    setShowEditForm(true);
   };
 
   const handleEditActivity = (activity: Activity) => {
     setEditingActivity(activity);
-    setShowTaskForm(true);
-  };
-
-  const handleCloseForm = () => {
-    setShowTaskForm(false);
-    setEditingActivity(undefined);
+    setShowEditForm(true);
   };
 
   const handleShowOverdue = () => {
@@ -212,14 +212,6 @@ export default function TasksPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* ActivityForm モーダル */}
-      {showTaskForm && (
-        <ActivityForm
-          mode={editingActivity ? "edit" : "create"}
-          activity={editingActivity}
-          onClose={handleCloseForm}
-        />
-      )}
     </MobileLayout>
   );
 }

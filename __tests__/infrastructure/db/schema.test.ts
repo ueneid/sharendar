@@ -17,13 +17,12 @@ describe('SharendarDB Schema Tests', () => {
       await testDb.initialize();
       
       expect(testDb.isOpen()).toBe(true);
-      expect(testDb.tables).toHaveLength(4);
+      expect(testDb.tables).toHaveLength(2);
       
       // テーブルの存在確認
       const tableNames = testDb.tables.map(table => table.name);
       expect(tableNames).toContain('familyMembers');
-      expect(tableNames).toContain('calendarEvents');
-      expect(tableNames).toContain('tasks');
+      expect(tableNames).toContain('activities');
     });
 
     it('should have correct indexes on tables', async () => {
@@ -38,25 +37,22 @@ describe('SharendarDB Schema Tests', () => {
         expect.objectContaining({ name: 'color' })
       );
 
-      // calendarEvents のインデックス確認
-      const calendarEventsTable = testDb.table('calendarEvents');
-      expect(calendarEventsTable.schema.indexes).toContainEqual(
-        expect.objectContaining({ name: 'date' })
+      // activities のインデックス確認
+      const activitiesTable = testDb.table('activities');
+      expect(activitiesTable.schema.indexes).toContainEqual(
+        expect.objectContaining({ name: 'category' })
       );
-      expect(calendarEventsTable.schema.indexes).toContainEqual(
-        expect.objectContaining({ name: 'memberIds', multi: true })
-      );
-
-      // tasks のインデックス確認
-      const tasksTable = testDb.table('tasks');
-      expect(tasksTable.schema.indexes).toContainEqual(
+      expect(activitiesTable.schema.indexes).toContainEqual(
         expect.objectContaining({ name: 'status' })
       );
-      expect(tasksTable.schema.indexes).toContainEqual(
-        expect.objectContaining({ name: 'dueDate' })
+      expect(activitiesTable.schema.indexes).toContainEqual(
+        expect.objectContaining({ name: 'priority' })
       );
-      expect(tasksTable.schema.indexes).toContainEqual(
+      expect(activitiesTable.schema.indexes).toContainEqual(
         expect.objectContaining({ name: 'memberIds', multi: true })
+      );
+      expect(activitiesTable.schema.indexes).toContainEqual(
+        expect.objectContaining({ name: 'tags', multi: true })
       );
     });
   });
@@ -137,39 +133,60 @@ describe('SharendarDB Schema Tests', () => {
       await testDb.initialize();
 
       // テストデータ作成
-      await testDb.calendarEvents.bulkAdd([
+      await testDb.activities.bulkAdd([
         {
-          id: 'event-1',
-          title: 'イベント1',
-          date: '2024-03-15',
+          id: 'activity-1',
+          title: 'アクティビティ1',
+          startDate: '2024-03-15',
           memberIds: ['member-1', 'member-2'],
-          type: 'event' as const
+          category: 'event' as const,
+          status: 'pending' as const,
+          priority: 'medium' as const,
+          isAllDay: true,
+          checklist: [],
+          createdAt: '2024-03-15',
+          updatedAt: '2024-03-15',
+          tags: []
         },
         {
-          id: 'event-2',
-          title: 'イベント2',
-          date: '2024-03-16',
+          id: 'activity-2',
+          title: 'アクティビティ2',
+          startDate: '2024-03-16',
           memberIds: ['member-1'],
-          type: 'event' as const
+          category: 'task' as const,
+          status: 'pending' as const,
+          priority: 'high' as const,
+          isAllDay: false,
+          checklist: [],
+          createdAt: '2024-03-16',
+          updatedAt: '2024-03-16',
+          tags: []
         },
         {
-          id: 'event-3',
-          title: 'イベント3',
-          date: '2024-03-17',
+          id: 'activity-3',
+          title: 'アクティビティ3',
+          startDate: '2024-03-17',
           memberIds: ['member-3'],
-          type: 'event' as const
+          category: 'meeting' as const,
+          status: 'pending' as const,
+          priority: 'low' as const,
+          isAllDay: true,
+          checklist: [],
+          createdAt: '2024-03-17',
+          updatedAt: '2024-03-17',
+          tags: []
         }
       ]);
 
-      // member-1 に関連するイベントを検索
-      const member1Events = await testDb.calendarEvents
+      // member-1 に関連するアクティビティを検索
+      const member1Activities = await testDb.activities
         .where('memberIds')
         .equals('member-1')
         .toArray();
 
-      expect(member1Events).toHaveLength(2);
-      expect(member1Events.map(e => e.id)).toContain('event-1');
-      expect(member1Events.map(e => e.id)).toContain('event-2');
+      expect(member1Activities).toHaveLength(2);
+      expect(member1Activities.map(a => a.id)).toContain('activity-1');
+      expect(member1Activities.map(a => a.id)).toContain('activity-2');
     });
   });
 
