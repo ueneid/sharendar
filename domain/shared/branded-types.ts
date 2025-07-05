@@ -10,6 +10,8 @@ export type TaskId = string & { readonly brand: unique symbol };
 export type ActivityId = string & { readonly brand: unique symbol }; // 統一ドメイン
 export type DateString = string & { readonly brand: unique symbol }; // YYYY-MM-DD
 export type TimeString = string & { readonly brand: unique symbol }; // HH:MM
+export type OcrResultId = string & { readonly brand: unique symbol }; // OCR結果ID
+export type OcrImageId = string & { readonly brand: unique symbol }; // OCR画像ID
 
 // Value Objects
 export type MemberName = string & { readonly brand: unique symbol };
@@ -30,3 +32,5 @@ export const asTaskTitle = (value: string): TaskTitle => value as TaskTitle;
 export const asActivityId = (value: string): ActivityId => value as ActivityId;
 export const asActivityTitle = (value: string): ActivityTitle => value as ActivityTitle;
 export const asColor = (value: string): Color => value as Color;
+export const asOcrResultId = (value: string): OcrResultId => value as OcrResultId;
+export const asOcrImageId = (value: string): OcrImageId => value as OcrImageId;
